@@ -9,7 +9,7 @@ MicroService framework :: Resource
   :target: https://coveralls.io/github/palankai/pyrs-resource?branch=master
 
 .. image:: https://readthedocs.org/projects/pyrs-resource/badge/?version=stable
-   :target: http://pyrs-resource.readthedocs.org/en/stable/
+   :target: http://pyrs-resource.readthedocs.org/
    :alt: Documentation Status
 
 
