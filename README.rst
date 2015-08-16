@@ -13,7 +13,7 @@ MicroService framework :: Resource
    :alt: Documentation Status
 
 
-This package implement the resources.
+This package implement the resources part of pyrs
 
 Goal
 ----
