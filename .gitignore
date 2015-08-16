@@ -1,0 +1,10 @@
+__pycache__
+*.py[co]
+_build
+*.egg-info/
+TAGS
+.#*
+.coverage
+build/
+dist/
+.vimrc_local
