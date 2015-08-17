@@ -1,0 +1,1 @@
+decorate = '_endpoint'
