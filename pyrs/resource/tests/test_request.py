@@ -48,6 +48,46 @@ class TestBuildKwargs(unittest.TestCase):
             kwargs, {'request': req}
         )
 
+    def test_injecting_app(self):
+        req = request.Request(
+            app="FakeApp",
+            opts=dict(inject_app=True),
+        )
+        kwargs = req.build()
+        self.assertEqual(
+            kwargs, {'app': "FakeApp"}
+        )
+
+    def test_injecting_auth(self):
+        req = request.Request(
+            auth="FakeAuth",
+            opts=dict(inject_auth=True),
+        )
+        kwargs = req.build()
+        self.assertEqual(
+            kwargs, {'auth': "FakeAuth"}
+        )
+
+    def test_injecting_cookies(self):
+        req = request.Request(
+            cookies="FakeCookies",
+            opts=dict(inject_cookies=True),
+        )
+        kwargs = req.build()
+        self.assertEqual(
+            kwargs, {'cookies': "FakeCookies"}
+        )
+
+    def test_injecting_session(self):
+        req = request.Request(
+            session="FakeSession",
+            opts=dict(inject_session=True),
+        )
+        kwargs = req.build()
+        self.assertEqual(
+            kwargs, {'session': "FakeSession"}
+        )
+
     def test_injecting_query(self):
         req = request.Request(
             opts=dict(inject_query=True),

@@ -16,47 +16,60 @@ from . import conf
 class Request(object):
 
     def __init__(
-        self, opts, app=None, path=None, query=None, body=None, headers=None
+        self, opts, app=None, path=None, query=None, body=None, headers=None,
+        auth=None, cookies=None, session=None
     ):
-        self.opts = opts
         self.app = app
+        self.auth = auth
+        self.body = body or {}
+        self.cookies = cookies
+        self.headers = headers or {}
+        self.opts = opts
         self.path = path or {}
         self.query = query or {}
-        self.body = body or {}
-        self.headers = headers or {}
+        self.session = session
         self._conf = conf.defaults.copy()
-        self._inject_path = self.opts.get(
-            'inject_path', self._conf['inject_path']
-        )
-        self._inject_query = self.opts.get(
-            'inject_query', self._conf['inject_query']
-        )
-        self._inject_request = self.opts.get(
-            'inject_request', self._conf['inject_request']
-        )
-        self._inject_body = self.opts.get(
-            'inject_body', self._conf['inject_body']
-        )
-        if self._inject_request and self._inject_request is True:
-            self._inject_request = self._conf['inject_request_name']
-
-    def __getitem__(self, name):
-        return self.headers[name]
+        self._setup_injects()
 
     def build(self):
         kwargs = {}
+        kwargs.update(self._inject(
+            self._inject_body, self.body,
+            self.opts.get(self._conf['body_schema_option'], None)
+        ))
         kwargs.update(self._inject(self._inject_path, self.path))
         kwargs.update(self._inject(
             self._inject_query, self.query,
             self.opts.get(self._conf['query_schema_option'], None)
         ))
-        kwargs.update(self._inject(
-            self._inject_body, self.body,
-            self.opts.get(self._conf['body_schema_option'], None)
-        ))
-        if self._inject_request:
-            kwargs[self._inject_request] = self
+        kwargs.update(self._inject(self._inject_app, self.app))
+        kwargs.update(self._inject(self._inject_auth, self.auth))
+        kwargs.update(self._inject(self._inject_cookies, self.cookies))
+        kwargs.update(self._inject(self._inject_request, self))
+        kwargs.update(self._inject(self._inject_session, self.session))
         return kwargs
+
+    def __getitem__(self, name):
+        return self.headers[name]
+
+    def _setup_injects(self):
+        self._inject_body = self._get_inject('inject_body', False)
+        self._inject_path = self._get_inject('inject_path', False)
+        self._inject_query = self._get_inject('inject_query', False)
+
+        self._inject_app = self._get_inject('inject_app', True)
+        self._inject_auth = self._get_inject('inject_auth', True)
+        self._inject_cookies = self._get_inject('inject_cookies', True)
+        self._inject_request = self._get_inject('inject_request', True)
+        self._inject_session = self._get_inject('inject_session', True)
+
+    def _get_inject(self, name, force_kwargs=False):
+        inject = self.opts.get(
+            name, self._conf[name]
+        )
+        if force_kwargs and inject is True:
+            inject = self._conf[name+'_name']
+        return inject
 
     def _inject(self, inject, value, opt=None):
         if inject:
