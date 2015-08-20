@@ -2,7 +2,7 @@ import unittest
 
 from pyrs import schema
 
-from .. import conf
+from .. import lib
 from .. import request
 
 
@@ -17,7 +17,7 @@ class TestBuildKwargs(unittest.TestCase):
             headers={'host': 'www.example.com'}
         )
         self.assertEqual(req.opts, {'request': None})
-        self.assertEqual(req.app, conf.defaults)
+        self.assertEqual(req.app, lib.get_config())
         self.assertEqual(req.path, {'name': 'user'})
         self.assertEqual(req.query, {'limit': '5'})
         self.assertEqual(req.body, {'password': '123'})
@@ -54,7 +54,7 @@ class TestBuildKwargs(unittest.TestCase):
         )
         kwargs = req.build()
         self.assertEqual(
-            kwargs, {'app': conf.defaults}
+            kwargs, {'app': lib.get_config()}
         )
 
     def test_injecting_auth(self):

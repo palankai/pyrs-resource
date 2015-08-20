@@ -28,16 +28,3 @@ class Application(object):
 
     def match(self, method, path):
         return self._adapter.match(path, method)
-
-
-class Executer(object):
-
-    def __init__(self, endpoints, query=None, body=None, headers=None):
-        self.endpoints = endpoints
-        self.query = query
-        self.body = body
-        self.headers = headers
-
-    def __call__(self, endpoint, kwargs):
-        resource = self.endpoints[endpoint]
-        return resource(**kwargs)

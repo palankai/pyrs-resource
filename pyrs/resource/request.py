@@ -10,7 +10,7 @@ import inspect
 
 from pyrs import schema
 
-from . import conf
+from . import lib
 
 
 class Request(object):
@@ -19,7 +19,7 @@ class Request(object):
         self, opts, app=None, path=None, query=None, body=None, headers=None,
         auth=None, cookies=None, session=None
     ):
-        self.app = app or conf.defaults
+        self.app = app or lib.get_config()
         self.auth = auth
         self.body = body or {}
         self.cookies = cookies

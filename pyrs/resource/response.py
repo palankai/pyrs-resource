@@ -2,7 +2,7 @@ import inspect
 
 from pyrs import schema
 
-from . import conf
+from . import lib
 
 
 class Response(object):
@@ -10,7 +10,7 @@ class Response(object):
 
     def __init__(self, content, app=None, opts=None, request=None):
         self.content = content
-        self.app = app or conf.defaults
+        self.app = app or lib.get_config()
         self.opts = opts or {}
         self.request = request
         self.processor = self.opts.get(

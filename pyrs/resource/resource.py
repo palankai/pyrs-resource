@@ -35,9 +35,21 @@ def GET(_func=None, **kwargs):
 
 def POST(_func=None, **kwargs):
     """
-    Ensure the given function will be available for GET method
+    Ensure the given function will be available for POST method
     """
-    return endpoint(_func, methods=['POST'], status=201, **kwargs)
+    return endpoint(
+        _func, methods=['POST'], status=kwargs.pop('status', 201), **kwargs
+    )
+
+
+def RPC(_func=None, **kwargs):
+    """
+    Ensure the given function will be available for POST method
+    This action tend to use as Remote procedure call
+    """
+    return endpoint(
+        _func, methods=['POST'], **kwargs
+    )
 
 
 def PUT(_func=None, **kwargs):

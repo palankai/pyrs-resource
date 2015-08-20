@@ -28,3 +28,12 @@ def get_resource_members(resource):
             inspect.getmembers(resource)
         )
     ]
+
+
+def get_config(update=None):
+    config = {}
+    for k in dir(conf):
+        if not k.startswith('_'):
+            config[k] = getattr(conf, k)
+    config.update(update or {})
+    return config
