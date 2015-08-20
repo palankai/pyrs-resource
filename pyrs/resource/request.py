@@ -19,7 +19,7 @@ class Request(object):
         self, opts, app=None, path=None, query=None, body=None, headers=None,
         auth=None, cookies=None, session=None
     ):
-        self.app = app
+        self.app = app or conf.defaults
         self.auth = auth
         self.body = body or {}
         self.cookies = cookies
@@ -28,19 +28,19 @@ class Request(object):
         self.path = path or {}
         self.query = query or {}
         self.session = session
-        self._conf = conf.defaults.copy()
+
         self._setup_injects()
 
     def build(self):
         kwargs = {}
         kwargs.update(self._inject(
             self._inject_body, self.body,
-            self.opts.get(self._conf['body_schema_option'], None)
+            self.opts.get(self.app['body_schema_option'], None)
         ))
         kwargs.update(self._inject(self._inject_path, self.path))
         kwargs.update(self._inject(
             self._inject_query, self.query,
-            self.opts.get(self._conf['query_schema_option'], None)
+            self.opts.get(self.app['query_schema_option'], None)
         ))
         kwargs.update(self._inject(self._inject_app, self.app))
         kwargs.update(self._inject(self._inject_auth, self.auth))
@@ -65,10 +65,10 @@ class Request(object):
 
     def _get_inject(self, name, force_kwargs=False):
         inject = self.opts.get(
-            name, self._conf[name]
+            name, self.app[name]
         )
         if force_kwargs and inject is True:
-            inject = self._conf[name+'_name']
+            inject = self.app[name+'_name']
         return inject
 
     def _inject(self, inject, value, opt=None):

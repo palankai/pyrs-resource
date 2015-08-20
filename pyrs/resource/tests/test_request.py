@@ -2,6 +2,7 @@ import unittest
 
 from pyrs import schema
 
+from .. import conf
 from .. import request
 
 
@@ -10,14 +11,13 @@ class TestBuildKwargs(unittest.TestCase):
     def test_simple(self):
         req = request.Request(
             opts=dict(request=None),
-            app="Fake",
             path=dict(name='user'),
             query=dict(limit='5'),
             body=dict(password='123'),
             headers={'host': 'www.example.com'}
         )
         self.assertEqual(req.opts, {'request': None})
-        self.assertEqual(req.app, "Fake")
+        self.assertEqual(req.app, conf.defaults)
         self.assertEqual(req.path, {'name': 'user'})
         self.assertEqual(req.query, {'limit': '5'})
         self.assertEqual(req.body, {'password': '123'})
@@ -30,7 +30,7 @@ class TestBuildKwargs(unittest.TestCase):
     def test_case_default(self):
         req = request.Request(
             opts=dict(request=None),
-            app="Fake",
+            app={},
             path=dict(search='user'),
             query=dict(limit='5'),
             body=None,
@@ -50,12 +50,11 @@ class TestBuildKwargs(unittest.TestCase):
 
     def test_injecting_app(self):
         req = request.Request(
-            app="FakeApp",
             opts=dict(inject_app=True),
         )
         kwargs = req.build()
         self.assertEqual(
-            kwargs, {'app': "FakeApp"}
+            kwargs, {'app': conf.defaults}
         )
 
     def test_injecting_auth(self):

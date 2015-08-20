@@ -1,13 +1,11 @@
 import unittest
 
 import werkzeug
-from pyrs import schema
 
 from .. import application
 from .. import builder
 from .. import lib
 from .. import resource
-from .. import response
 
 
 class TestBuilder(unittest.TestCase):
@@ -109,48 +107,48 @@ class TestBuilder(unittest.TestCase):
         self.assertIsInstance(app._adapter, werkzeug.routing.MapAdapter)
 
 
-class TestRequestBuilder(unittest.TestCase):
+# class TestRequestBuilder(unittest.TestCase):
 
-    def test_default_response(self):
-        res = self.make_response(response=None)
+#    def test_default_response(self):
+#        res = self.make_response(response=None)
 
-        self.assertIsInstance(res, response.Response)
+#        self.assertIsInstance(res, response.Response)
 
-    def test_response_cls(self):
-        res = self.make_response(response=response.Response)
+#    def test_response_cls(self):
+#        res = self.make_response(response=response.Response)
 
-        self.assertIsInstance(res, response.Response)
+#        self.assertIsInstance(res, response.Response)
 
-    def test_response_instance(self):
-        instance = response.Response()
-        res = self.make_response(response=instance)
+#    def test_response_instance(self):
+#        instance = response.Response()
+#        res = self.make_response(response=instance)
 
-        self.assertIsInstance(res, response.Response)
-        self.assertEqual(res, instance)
+#        self.assertIsInstance(res, response.Response)
+#        self.assertEqual(res, instance)
 
-    def test_schema_cls(self):
-        res = self.make_response(response=schema.String)
+#    def test_schema_cls(self):
+#        res = self.make_response(response=schema.String)
 
-        self.assertIsInstance(res, response.Response)
-        self.assertIsInstance(res, response.SchemaResponse)
+#        self.assertIsInstance(res, response.Response)
+#        self.assertIsInstance(res, response.SchemaResponse)
 
-    def test_schema_instance(self):
-        res = self.make_response(response=schema.String())
+#    def test_schema_instance(self):
+#        res = self.make_response(response=schema.String())
 
-        self.assertIsInstance(res, response.Response)
-        self.assertIsInstance(res, response.SchemaResponse)
+#        self.assertIsInstance(res, response.Response)
+#        self.assertIsInstance(res, response.SchemaResponse)
 
-    def test_error_handling(self):
-        class MyUnexpectedResponse(object):
-            pass
+#    def test_error_handling(self):
+#        class MyUnexpectedResponse(object):
+#            pass
 
-        with self.assertRaises(ValueError):
-            self.make_response(response=MyUnexpectedResponse)
+#        with self.assertRaises(ValueError):
+#            self.make_response(response=MyUnexpectedResponse)
 
-    def make_response(self, response):
-        @resource.GET(response=response)
-        def func(self):
-            pass
-        b = builder.ApplicationBuilder()
-        b.add('/path', func)
-        return b.make_response(func)
+#    def make_response(self, response):
+#        @resource.GET(response=response)
+#        def func(self):
+#            pass
+#        b = builder.ApplicationBuilder()
+#        b.add('/path', func)
+#        return b.make_response(func)

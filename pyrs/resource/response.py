@@ -1,17 +1,47 @@
-from . import lib
+import inspect
+
+from pyrs import schema
+
+from . import conf
 
 
 class Response(object):
     """Generic response class"""
 
-    def __init__(self):
-        pass
-
-    def update(self, content, endpoint):
+    def __init__(self, content, app=None, opts=None, request=None):
         self.content = content
-        self.status = lib.get_options(endpoint, 'status')
-        self.headers = {}
+        self.app = app or conf.defaults
+        self.opts = opts or {}
+        self.request = request
+        self.processor = self.opts.get(
+            self.app['option_response_name']
+        )
+        if inspect.isclass(self.processor):
+            self.processor = self.processor()
+        self.status = self.opts.get(
+            self.app['option_status_name'], self.app['option_status']
+        )
+        self.headers = self.opts.get(
+            self.app['option_headers_name'], {}
+        )
 
-
-class SchemaResponse(Response):
-    pass
+    def build(self):
+        status = self.status
+        headers = self.headers.copy()
+        content = self.content
+        if isinstance(content, tuple):
+            if len(content) == 3:
+                content, status, headers_update = content
+                headers.update(headers_update)
+            if len(content) == 2 and isinstance(content[1], int):
+                content, status = content
+            if len(content) == 2 and isinstance(content[1], dict):
+                content, headers_update = content
+                headers.update(headers_update)
+        if isinstance(self.processor, schema.Schema):
+            headers['Content-Type'] = 'application/json'
+            content = self.processor.dump(content)
+            return (content, status, headers)
+        if callable(self.processor):
+            return self.processor(content, status, headers)
+        return (content, status, headers)
