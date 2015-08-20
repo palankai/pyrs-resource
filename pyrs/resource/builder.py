@@ -1,20 +1,23 @@
 import inspect
 
 import werkzeug
+from pyrs import schema
 
 from . import application
 from . import lib
+from . import response
 
 
 class ApplicationBuilder(object):
 
     def __init__(self):
-        self._map = werkzeug.routing.Map()
-        self._endpoints = {}
+        self.rules = werkzeug.routing.Map()
+        self.endpoints = {}
+        self.default_response_cls = response.Response
 
     def bind(self, server_name):
-        adapter = self._map.bind(server_name)
-        return application.Application(adapter, self._endpoints)
+        adapter = self.rules.bind(server_name)
+        return application.Application(self, adapter)
 
     def add(self, path, resource, prefix=''):
         if inspect.isfunction(resource):
@@ -23,6 +26,27 @@ class ApplicationBuilder(object):
             self._add_class(path, resource(), prefix)
         else:
             self._add_class(path, resource, prefix)
+
+    def add_rule(self, rule):
+        self.rules.add(rule)
+
+    def set_endpoint(self, name, resource):
+        self.endpoints[name] = resource
+
+    def make_response(self, endpoint):
+        res = lib.get_options(endpoint, 'response')
+        if res is None:
+            return self.default_response_cls()
+        if inspect.isclass(res):
+            res = res()
+        if isinstance(res, response.Response):
+            return res
+        if isinstance(res, schema.Schema):
+            return response.SchemaResponse()
+        raise ValueError("Unable to process the response")
+
+    def lookup(self, name):
+        return self.endpoints[name]
 
     def _add_class(self, path, resource, prefix=''):
         members = lib.get_resource_members(resource)
@@ -43,8 +67,8 @@ class ApplicationBuilder(object):
                 prefix += '#'
             name = prefix+opts['name']
             rule = self._make_rule(path, opts['methods'], name)
-            self._map.add(rule)
-            self._endpoints[name] = resource
+            self.add_rule(rule)
+            self.set_endpoint(name, resource)
         else:
             raise ValueError(
                 "The given function (%s) is not and endpoint endpoint"

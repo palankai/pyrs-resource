@@ -26,11 +26,16 @@ class TestApplication(unittest.TestCase):
         self.assertEqual(kwargs, {})
 
     def test_dispatch(self):
-        body, status, headers = self.app.dispatch('GET', '/path/')
+        content, status, headers = self.app.dispatch('GET', '/path/')
 
-        self.assertEqual(body, 'hello')
+        self.assertEqual(content, 'hello')
         self.assertEqual(status, 200)
         self.assertEqual(headers, {})
+
+    def test_dispatch_x(self):
+        res = self.app.disp('GET', '/path/')
+
+        self.assertEqual(res, 1)
 
     def test_execute_endpoint(self):
         @resource.GET
@@ -39,6 +44,6 @@ class TestApplication(unittest.TestCase):
 
         res = self.app.execute(func, {})
         self.assertIsInstance(res, response.Response)
-        self.assertEqual(res.body, 'hello')
+        self.assertEqual(res.content, 'hello')
         self.assertEqual(res.status, 200)
         self.assertEqual(res.headers, {})
