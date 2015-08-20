@@ -3,7 +3,7 @@ import unittest
 
 from pyrs import schema
 
-from .. import application_old as application
+from .. import base
 from .. import exceptions
 from .. import resource
 
@@ -16,7 +16,8 @@ class TestBasicCases(unittest.TestCase):
             {'id': 2, 'name': 'guest', 'email': 'guest@example.com'},
         ]
 
-        class UserSchema(schema.Schema):
+        class UserSchema(schema.Object):
+            id = schema.Integer()
             name = schema.String()
             email = schema.String()
 
@@ -26,11 +27,12 @@ class TestBasicCases(unittest.TestCase):
             def get_users(self):
                 return app_users
 
-            @resource.GET(path='/<name>')
+            @resource.GET(path='/<name>', response=UserSchema)
             def get_user_by_name(self, name):
                 for user in self.get_users():
                     if user['name'] == name:
-                        return user
+                        # Workaround of pyrs-schema issue #14
+                        return user.copy()
                 raise exceptions.NotFound("User '%s' doesn't exist" % name)
 
             @resource.POST
@@ -38,7 +40,7 @@ class TestBasicCases(unittest.TestCase):
                 user['id'] = 3
                 return user
 
-        class Application(application.Application):
+        class Application(base.App):
             pass
 
         self.app_users = app_users
@@ -47,10 +49,10 @@ class TestBasicCases(unittest.TestCase):
 
     def test_get_users(self):
 
-        r = self.app.dispatch('GET', '/user/')
-        self.assertEqual(json.loads(r), self.app_users)
+        content, status, headers = self.app.dispatch('/user/', 'GET')
+        self.assertEqual(content, self.app_users)
 
     def test_get_user_by_name(self):
 
-        r = self.app.dispatch('GET', '/user/admin')
-        self.assertEqual(json.loads(r), self.app_users[0])
+        content, status, headers = self.app.dispatch('/user/admin', 'GET')
+        self.assertEqual(json.loads(content), self.app_users[0])
