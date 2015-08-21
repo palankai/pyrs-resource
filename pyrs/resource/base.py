@@ -1,23 +1,35 @@
 import inspect
 
+import jsonschema
 import werkzeug
 
 from . import lib
 from . import request
 from . import response
+from . import errors
 
 
 class App(object):
+    #: List of hooks, will be **overriden** by App(hooks=[])
+    hooks = []
 
-    def __init__(self, host='localhost', debug=False):
+    #: List of rules, will be **extended** by App(resources=[])
+    #: Tuple shuld be presented: ('path', Resource, [prefix])
+    resources = []
+
+    def __init__(self, hooks=None, resources=None, **config):
         self.config = lib.get_config(getattr(self, 'config', {}))
-        self.config.update({
-            'debug': debug,
-            'host': host
-        })
-        self.rules = werkzeug.routing.Map()
-        self.adapter = self.rules.bind(host)
         self.functions = {}
+        if hooks is not None:
+            self.hooks = hooks
+        self.config.update(config)
+        self.rules = werkzeug.routing.Map()
+        for resource in self.resources:
+            self.add(*resource)
+        for resource in resources or ():
+            self.add(*resource)
+        self.adapter = self.rules.bind(self['host'])
+        self.setup_hooks()
 
     def __getitem__(self, name):
         return self.config[name]
@@ -32,9 +44,13 @@ class App(object):
         req = request.Request(
             opts, self, path, query, body, headers, cookies, session
         )
-        kwargs = req.build()
-        content = func(**kwargs)
-        res = response.Response(content, self, opts, req)
+        try:
+            kwargs = req.build()
+            content = func(**kwargs)
+            res = response.Response(content, self, opts, req)
+            return res.build()
+        except Exception as ex:
+            res = self.handle_exception(ex, opts, req)
         return res.build()
 
     def add(self, path, resource, prefix=''):
@@ -45,11 +61,24 @@ class App(object):
         else:
             self._add_class(path, resource, prefix)
 
+    def handle_exception(self, ex, opts, req):
+        ex = self.transform_exception(ex)
+        res = errors.ErrorResponse(ex, self, opts, req)
+        return res
+
+    def transform_exception(self, ex):
+        if isinstance(ex, jsonschema.exceptions.ValidationError):
+            return errors.ValidationError(cause=ex)
+        return ex
+
     def add_rule(self, rule):
         self.rules.add(rule)
 
     def set_function(self, name, resource):
         self.functions[name] = resource
+
+    def setup_hooks(self):
+        pass
 
     def _add_class(self, path, resource, prefix=''):
         members = lib.get_resource_members(resource)

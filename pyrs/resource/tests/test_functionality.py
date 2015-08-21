@@ -4,7 +4,6 @@ import unittest
 from pyrs import schema
 
 from .. import base
-from .. import exceptions
 from .. import resource
 
 
@@ -33,7 +32,6 @@ class TestBasicCases(unittest.TestCase):
                     if user['name'] == name:
                         # Workaround of pyrs-schema issue #14
                         return user.copy()
-                raise exceptions.NotFound("User '%s' doesn't exist" % name)
 
             @resource.POST
             def create_user(self, user):
@@ -56,3 +54,9 @@ class TestBasicCases(unittest.TestCase):
 
         content, status, headers = self.app.dispatch('/user/admin', 'GET')
         self.assertEqual(json.loads(content), self.app_users[0])
+
+    def test_get_user_by_name_invalid(self):
+
+        content, status, headers = self.app.dispatch('/user/invalid', 'GET')
+        self.assertEqual(status, 500)
+        self.assertEqual(json.loads(content), {'error': 'validation_error'})

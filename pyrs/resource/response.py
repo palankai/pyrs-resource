@@ -13,6 +13,9 @@ class Response(object):
         self.app = app or lib.get_config()
         self.opts = opts or {}
         self.request = request
+        self.setup()
+
+    def setup(self):
         self.processor = self.opts.get(
             self.app['option_response_name']
         )

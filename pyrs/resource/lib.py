@@ -1,5 +1,8 @@
 import inspect
 import logging
+import traceback
+import sys
+
 
 from . import conf
 
@@ -9,6 +12,10 @@ def get_logger(obj):
 
 
 def get_fqname(thing):
+    if isinstance(thing, type):
+        return thing.__module__+'.'+thing.__name__
+    if isinstance(thing, Exception):
+        return thing.__class__.__module__+'.'+thing.__class__.__name__
     if not hasattr(thing, '__name__'):
         return thing.__module__+'.'+thing.__class__.__name__
     return thing.__module__+'.'+thing.__name__
@@ -37,3 +44,16 @@ def get_config(update=None):
             config[k] = getattr(conf, k)
     config.update(update or {})
     return config
+
+
+def get_traceback():
+    unused, unused, exc_traceback = sys.exc_info()
+    return parse_traceback(exc_traceback)
+
+
+def parse_traceback(trace):
+    rows = []
+    for row in traceback.extract_tb(trace):
+        rows.append("%s:%s %s() %s" % (row[0], row[1], row[2], row[3]))
+    rows.reverse()
+    return rows

@@ -31,6 +31,24 @@ class TestConfiguration(unittest.TestCase):
         with self.assertRaises(KeyError):
             app['doesnt_exists_config_key']
 
+    def test_resource_by_declaration(self):
+        @resource.GET
+        def func1(self):
+            pass
+
+        @resource.GET
+        def func2(self):
+            pass
+
+        class MyApp(base.App):
+            resources = [
+                ('/path1', func1)
+            ]
+        app = MyApp(resources=[('/path2', func2)])
+        self.assertEqual(
+            sorted(list(app.functions.keys())), ['func1', 'func2']
+        )
+
 
 class TestRules(unittest.TestCase):
 
@@ -135,7 +153,7 @@ class TestDispatch(unittest.TestCase):
             pk = schema.Integer()
 
         class Resource(object):
-            @resource.RPC(request=Req, response=Res)
+            @resource.RPC(request=Req, response=Res, query=Query)
             def func(self, username, limit, **qry):
                 return {'pk': 1, 'username': username, 'limit': limit}
 
@@ -151,7 +169,7 @@ class TestDispatch(unittest.TestCase):
         content = json.loads(content)
 
         self.assertEqual(
-            content, {'pk': 1, 'username': 'testuser', 'limit': '5'}
+            content, {'pk': 1, 'username': 'testuser', 'limit': 5}
         )
         self.assertEqual(status, 200)
         self.assertEqual(headers, {'Content-Type': 'application/json'})

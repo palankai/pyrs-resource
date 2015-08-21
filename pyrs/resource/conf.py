@@ -1,5 +1,8 @@
 decorate = '_endpoint'
 
+host = 'localhost'
+debug = False
+
 body_schema_option = 'request'
 inject_app = False
 inject_app_name = 'app'
