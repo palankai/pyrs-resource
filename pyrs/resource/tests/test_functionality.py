@@ -33,10 +33,10 @@ class TestBasicCases(unittest.TestCase):
                         # Workaround of pyrs-schema issue #14
                         return user.copy()
 
-            @resource.POST
-            def create_user(self, user):
-                user['id'] = 3
-                return user
+            @resource.POST(request=UserSchema, inject_body='body')
+            def create_user(self, body):
+                body['id'] = 12
+                return body
 
         class Application(base.App):
             pass
@@ -55,8 +55,18 @@ class TestBasicCases(unittest.TestCase):
         content, status, headers = self.app.dispatch('/user/admin', 'GET')
         self.assertEqual(json.loads(content), self.app_users[0])
 
-    def test_get_user_by_name_invalid(self):
+    def test_get_user_by_name_invalid_response(self):
 
         content, status, headers = self.app.dispatch('/user/invalid', 'GET')
         self.assertEqual(status, 500)
         self.assertEqual(json.loads(content), {'error': 'validation_error'})
+
+    def test_invalid_request(self):
+
+        content, status, headers = self.app.dispatch(
+            '/user/', 'POST', body={'id': '"hello"'}
+        )
+        self.assertEqual(status, 400)
+        self.assertEqual(
+            json.loads(content), {'error': 'invalid_request_format'}
+        )

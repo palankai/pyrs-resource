@@ -62,6 +62,11 @@ class ValidationError(Error):
     error = 'validation_error'
 
 
+class InputValidationError(Error):
+    status = 400
+    error = 'invalid_request_format'
+
+
 class DetailsSchema(schema.Object):
     traceback = schema.Array()
 

@@ -9,8 +9,10 @@ and can be passed to the endpoint as well.
 import inspect
 
 from pyrs import schema
+import jsonschema
 
 from . import lib
+from . import errors
 
 
 class Request(object):
@@ -87,7 +89,10 @@ class Request(object):
         In that case the schema `load` will be executed
         """
         if inspect.isclass(opt) and issubclass(opt, schema.Object):
-            return opt().load(value)
+            opt = opt()
         if isinstance(opt, schema.Object):
-            return opt.load(value)
+            try:
+                return opt.load(value)
+            except jsonschema.exceptions.ValidationError as ex:
+                raise errors.InputValidationError(cause=ex)
         return value
