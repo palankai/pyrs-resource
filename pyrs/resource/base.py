@@ -1,6 +1,5 @@
 import inspect
 
-import jsonschema
 import werkzeug
 
 from . import lib
@@ -90,8 +89,6 @@ class App(object):
         return res
 
     def transform_exception(self, ex):
-        if isinstance(ex, jsonschema.exceptions.ValidationError):
-            return errors.ValidationError(cause=ex)
         return ex
 
     def add_rule(self, rule):

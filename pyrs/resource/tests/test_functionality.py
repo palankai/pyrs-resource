@@ -59,7 +59,10 @@ class TestBasicCases(unittest.TestCase):
 
         content, status, headers = self.app.dispatch('/user/invalid', 'GET')
         self.assertEqual(status, 500)
-        self.assertEqual(json.loads(content), {'error': 'validation_error'})
+        self.assertEqual(
+            json.loads(content)['error'],
+            'jsonschema.exceptions.ValidationError'
+        )
 
     def test_invalid_request(self):
 
