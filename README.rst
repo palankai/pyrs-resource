@@ -54,8 +54,8 @@ Nutshell (notice that, it would be the achivement)
     app.add('/user', UserResouce)
 
 In this example I've shown Django (like) example.
-The schema is based on `pyrs.schema <http://pyrs-schema.readthedocs.org/>`_
-Even I tend to use that framework you would be able to use any other.
+The schema is based on `pyrs.schema <http://pyrs-schema.readthedocs.org/>`_.
+Even if I tend to use that framework, you would be able to use any other.
 
 Features
 --------
@@ -75,7 +75,7 @@ Installation
 Dependencies
 ------------
 
-See `requirements.txt` for details, but mainly depends on `Werkzeug <http://werkzeug.pocoo.org/>`_
+See `requirements.txt` for details, but mainly depends on `Werkzeug <http://werkzeug.pocoo.org/>`_.
 I'm using that project routing capabilities. Also depends on `pyrs.schema` as
 I mentioned in nutshell section.
 
