@@ -1,3 +1,14 @@
+"""
+Hooks in general the way to override amend the exist functionality of app.
+Even you could extend the app, sometimes much easier if you attach a hook like
+authentication hook and the will process the request, make request.auth
+available. But also you can create your own hook handling special header values
+or give special error handling strategy.
+
+The `Hook` class provide the skeleton of any further hooks.
+"""
+
+
 class Hook(object):
     """
     Hooks help to extend the functionality of application. The 3 hooks executed

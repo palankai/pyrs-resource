@@ -10,14 +10,21 @@ from . import errors
 
 
 class App(object):
-    #: List of hooks, will be **overriden** by App(hooks=[])
+    """
+    Resource application, provide routing and execution
+
+    :param list hooks: List of hook classes (check :py:mod:`.hooks`)
+    :param list resources: Expected items `(path, resource class, [namespace])`
+    :param config: optional configuration values (updated :py:mod:`.conf`)
+    """
     hooks = []
 
     #: List of rules, will be **extended** by App(resources=[])
-    #: Tuple shuld be presented: ('path', Resource, [prefix])
+    #: Tuple should be presented: ('path', Resource, [namespace])
     resources = []
 
     def __init__(self, hooks=None, resources=None, **config):
+        #: Store the configuration (copied from :py:mod:`.conf`)
         self.config = lib.get_config(getattr(self, 'config', {}))
         self.functions = {}
         if hooks is not None:
@@ -38,14 +45,23 @@ class App(object):
         self, path_info, method, query=None, body=None, headers=None,
         cookies=None, session=None
     ):
-        endpoint, path = self.adapter.match(path_info, method)
-        func = self.functions[endpoint]
-        opts = lib.get_options(func)
-        req = request.Request(
-            opts, self, path, query, body, headers, cookies, session
-        )
+        opts = None
+        req = None
         try:
+            endpoint, path = self.adapter.match(path_info, method)
+            func = self.functions[endpoint]
+            opts = lib.get_options(func)
+            req = request.Request(
+                opts, self, path, query, body, headers, cookies, session
+            )
             kwargs = req.build()
+        except Exception as ex:
+            res = self.handle_client_exceptions(
+                ex, path_info, method, opts, req
+            )
+            return res.build()
+
+        try:
             content = func(**kwargs)
             res = response.Response(content, self, opts, req)
             return res.build()
@@ -60,6 +76,13 @@ class App(object):
             self._add_class(path, resource(), prefix)
         else:
             self._add_class(path, resource, prefix)
+
+    def handle_client_exceptions(
+        self, ex, path_info, method, opts=None, req=None
+    ):
+        ex = self.transform_exception(ex)
+        res = errors.ErrorResponse(ex, self, opts, req)
+        return res
 
     def handle_exception(self, ex, opts, req):
         ex = self.transform_exception(ex)

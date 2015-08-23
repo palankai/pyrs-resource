@@ -1,8 +1,9 @@
 #!/usr/bin/env python
-
-from setuptools import setup, find_packages
 import os
 
+from setuptools import setup, find_packages
+
+from pyrs.resource import __version__
 
 def read(fname):
     return open(os.path.join(os.path.dirname(__file__), fname)).read()
@@ -13,8 +14,9 @@ setup(
     author_email='csaba.palankai@gmail.com',
     packages=find_packages(),
     include_package_data=True,
-    version='0.2.0',
-    description="Python microservice framework - resource",
+    version=".".join(map(str, __version__)),
+    description="Python microservice framework",
+    url='https://github.com/palankai/pyrs-resource',
     long_description=read('README.rst'),
     classifiers=[
         'Development Status :: 4 - Beta',
@@ -35,8 +37,5 @@ setup(
     ],
     keywords=('service', 'rest', 'restful', 'swagger', 'resource'),
     zip_safe=False,
-    namespace_packages = [
-        'pyrs',
-    ],
     install_requires=[r for r in read("requirements.txt").split("\n") if r],
 )
