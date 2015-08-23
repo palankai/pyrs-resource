@@ -3,10 +3,10 @@ import os
 
 from setuptools import setup, find_packages
 
-from pyrs.resource import __version__
 
 def read(fname):
     return open(os.path.join(os.path.dirname(__file__), fname)).read()
+
 
 setup(
     name='pyrs-resource',
@@ -14,7 +14,7 @@ setup(
     author_email='csaba.palankai@gmail.com',
     packages=find_packages(),
     include_package_data=True,
-    version=".".join(map(str, __version__)),
+    version='0.2.0',
     description="Python microservice framework",
     url='https://github.com/palankai/pyrs-resource',
     long_description=read('README.rst'),
