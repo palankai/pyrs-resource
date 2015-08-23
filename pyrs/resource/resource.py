@@ -7,9 +7,10 @@ This module mainly define decorators for resources
 
 def endpoint(_func=None, path="/", **kwargs):
     """
-    Deadly simple decorator add _options to the given function.
+    Deadly simple decorator, add options to the given function.
     Can be user with or without any keyword arguments.
-    The default _options would contain the path and the name of the function.
+    The default options would contain the path and the name of the function.
+    Based on configuration: :py:data:`.conf.decorate`
     """
     def decorator(_func):
         if not hasattr(_func, conf.decorate):
@@ -28,6 +29,7 @@ def endpoint(_func=None, path="/", **kwargs):
 
 def GET(_func=None, **kwargs):
     """
+    Decorator function
     Ensure the given function will be available for GET method
     """
     return endpoint(_func, methods=['GET'], **kwargs)
@@ -35,6 +37,7 @@ def GET(_func=None, **kwargs):
 
 def POST(_func=None, **kwargs):
     """
+    Decorator function
     Ensure the given function will be available for POST method
     """
     return endpoint(
@@ -44,6 +47,7 @@ def POST(_func=None, **kwargs):
 
 def RPC(_func=None, **kwargs):
     """
+    Decorator function
     Ensure the given function will be available for POST method
     This action tend to use as Remote procedure call
     """
@@ -54,6 +58,7 @@ def RPC(_func=None, **kwargs):
 
 def PUT(_func=None, **kwargs):
     """
+    Decorator function
     Ensure the given function will be available for GET method
     """
     return endpoint(_func, methods=['PUT'], **kwargs)
@@ -61,6 +66,7 @@ def PUT(_func=None, **kwargs):
 
 def DELETE(_func=None, **kwargs):
     """
+    Decorator function
     Ensure the given function will be available for GET method
     """
     return endpoint(_func, methods=['DELETE'], **kwargs)
@@ -68,6 +74,7 @@ def DELETE(_func=None, **kwargs):
 
 def PATCH(_func=None, **kwargs):
     """
+    Decorator function
     Ensure the given function will be available for GET method
     """
     return endpoint(_func, methods=['PATCH'], **kwargs)

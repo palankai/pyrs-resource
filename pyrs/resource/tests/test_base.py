@@ -155,7 +155,7 @@ class TestDispatch(unittest.TestCase):
         class Resource(object):
             @resource.RPC(request=Req, response=Res, query=Query)
             def func(self, username, limit, **qry):
-                return {'pk': 1, 'username': username, 'limit': limit}
+                return {'pk': 1, 'username': username}
 
         self.app = base.App()
         self.app.add('/path', Resource())
@@ -163,13 +163,13 @@ class TestDispatch(unittest.TestCase):
     def test_dispatch(self):
         content, status, headers = self.app.dispatch(
             '/path/', 'POST',
-            query={'limit': '5', 'extra': '12'},
+            query={'limit': '5'},
             body={'username': 'testuser'}
         )
         content = json.loads(content)
 
         self.assertEqual(
-            content, {'pk': 1, 'username': 'testuser', 'limit': 5}
+            content, {'pk': 1, 'username': 'testuser'}
         )
         self.assertEqual(status, 200)
         self.assertEqual(headers, {'Content-Type': 'application/json'})

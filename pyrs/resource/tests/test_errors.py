@@ -1,26 +1,28 @@
 import json
 import unittest
 
-
 from .. import errors
 
 
-class TestResponse(unittest.TestCase):
+class TestError(unittest.TestCase):
 
-    def test_general_exception(self):
-        try:
-            raise Exception('message', 12)
-        except Exception as ex:
-            content = errors.ErrorSchema(debug=False).dump(ex)
-            name = ex.__class__.__module__+'.'+ex.__class__.__name__
-            pass
+    def test_wrap(self):
+        original = Exception()
+        name = original.__class__.__module__+'.'+original.__class__.__name__
+        ex = errors.Error.wrap(original)
 
-        content = json.loads(content)
+        self.assertIsInstance(ex, errors.Error)
+        self.assertEqual(ex.cause, original)
+        self.assertEqual(ex.error, name)
 
-        self.assertEqual(content, {
-            'error': name,
-            'message': ['message', 12],
-        })
+    def test_wrap_with_message(self):
+        original = Exception('Error message')
+        ex = errors.Error.wrap(original)
+
+        self.assertEqual(ex.args, ('Error message',))
+
+
+class TestSchema(unittest.TestCase):
 
     def test_base_error(self):
         try:
@@ -34,7 +36,7 @@ class TestResponse(unittest.TestCase):
 
         self.assertEqual(content, {
             'error': name,
-            'message': ['message', 12],
+            'message': 'message',
         })
 
     def test_special_error(self):

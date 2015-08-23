@@ -3,8 +3,7 @@ Configuration
 =============
 
 
-.. automodule:: resource.conf
+.. automodule:: pyrs.resource.conf
    :members:
    :undoc-members:
    :private-members:
-   :special-members:
