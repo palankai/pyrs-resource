@@ -65,7 +65,7 @@ class Error(Exception):
         """
         return self.status
 
-    def get_message(self, debug=False):
+    def dump(self, debug=False):
         """
         Should give back a dictionary which will be threated the response body.
         The message should be conform with the `ErrorSchema`.
@@ -95,7 +95,7 @@ class Error(Exception):
         details = {}
         if self.details:
             details = self.details.copy()
-        if debug:
+        if debug and (self.traceback or self.args[1:]):
             details['traceback'] = self.traceback
             details['args'] = self.args[1:]
         return details
@@ -154,7 +154,7 @@ class ErrorSchema(schema.Object):
     details = DetailsSchema()
 
     def dump(self, ex):
-        msg = ex.get_message(self.get_attr('debug', False))
+        msg = ex.dump(self.get_attr('debug', False))
         return super(ErrorSchema, self).dump(msg)
 
 
@@ -169,3 +169,26 @@ class ErrorResponse(response.Response):
             self.processor = self.content.schema(debug=self.app['debug'])
         else:
             self.processor = ErrorSchema(debug=self.app['debug'])
+
+
+class BadRequestErrorSchema(ErrorSchema):
+    errors = schema.Array()
+
+
+class BadRequestError(ClientError):
+    """
+    Request cannot be processed because of error.
+    """
+
+    schema = BadRequestErrorSchema
+    error = 'BadRequest'
+
+    def __init__(self, message=None, errors=None, **details):
+        super(BadRequestError, self).__init__(message, **details)
+        self.errors = errors
+
+    def dump(self, debug=False):
+        message = super(BadRequestError, self).dump(debug=debug)
+        if self.errors:
+            message['errors'] = self.errors
+        return message

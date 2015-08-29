@@ -56,3 +56,15 @@ class TestSchema(unittest.TestCase):
             'error_description': 'description of error',
             'error_uri': 'http://example.com/special',
         })
+
+
+class TestBadRequestError(unittest.TestCase):
+
+    def test_basic_behaviour(self):
+        ex = errors.BadRequestError('Request can\'t be serialized')
+        msg = ex.dump()
+
+        self.assertEqual(msg, {
+            'error': 'BadRequest',
+            'message': 'Request can\'t be serialized'
+        })
