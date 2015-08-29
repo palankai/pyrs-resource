@@ -12,7 +12,7 @@ setup(
     name='pyrs-resource',
     author='Csaba Palankai',
     author_email='csaba.palankai@gmail.com',
-    packages=find_packages(),
+    packages=find_packages(exclude=['*.tests', 'tests', '*.tests.*']),
     include_package_data=True,
     version='0.2.0',
     description="Python microservice framework",
@@ -22,8 +22,7 @@ setup(
         'Development Status :: 4 - Beta',
         'Environment :: Web Environment',
         'Intended Audience :: Developers',
-        'License :: OSI Approved ::'
-            ' GNU Lesser General Public License v3 (LGPLv3)',
+        'License :: OSI Approved :: MIT License',
         'Natural Language :: English',
         'Programming Language :: Python',
         'Programming Language :: Python :: 2.7',
