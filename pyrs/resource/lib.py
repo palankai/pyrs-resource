@@ -3,6 +3,7 @@ import logging
 import traceback
 import sys
 
+import werkzeug
 
 from . import conf
 
@@ -57,3 +58,22 @@ def parse_traceback(trace):
         rows.append("%s:%s %s() %s" % (row[0], row[1], row[2], row[3]))
     rows.reverse()
     return rows
+
+
+def parse_path(src):
+    path = ''
+    args = {}
+    for converter, arguments, part in werkzeug.routing.parse_rule(src):
+        if converter is None:
+            path += part
+        else:
+            path += '{%s}' % part
+            positional, keyword = _parse_converter_args(arguments)
+            args[part] = (converter, positional, keyword)
+    return path, args
+
+
+def _parse_converter_args(arguments):
+    if arguments is None:
+        return (), {}
+    return werkzeug.routing.parse_converter_args(arguments)

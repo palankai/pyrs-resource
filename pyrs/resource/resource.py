@@ -1,4 +1,5 @@
 from . import conf
+from . import lib
 
 """
 This module mainly define decorators for resources
@@ -12,12 +13,16 @@ def endpoint(_func=None, path="/", **kwargs):
     The default options would contain the path and the name of the function.
     Based on configuration: :py:data:`.conf.decorate`
     """
+    parsed_path, args = lib.parse_path(path)
+
     def decorator(_func):
         if not hasattr(_func, conf.decorate):
             setattr(_func, conf.decorate, {})
         getattr(_func, conf.decorate).update(kwargs)
         getattr(_func, conf.decorate).update({
-            'path': path,
+            'werkzeug_path': path,
+            'path': parsed_path,
+            'args': args,
             'name': kwargs.pop('name', _func.__name__),
             'status': kwargs.pop('status', 200),
         })

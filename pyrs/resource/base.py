@@ -110,7 +110,7 @@ class App(object):
             prefix = getattr(resource, '_name', lib.get_fqname(resource))
         for member in members:
             opts = lib.get_options(member)
-            self._add_function(path+opts['path'], member, prefix)
+            self._add_function(path+opts['werkzeug_path'], member, prefix)
 
     def _add_function(self, path, resource, prefix=''):
         opts = lib.get_options(resource)
