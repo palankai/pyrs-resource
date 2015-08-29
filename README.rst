@@ -12,12 +12,9 @@ MicroService framework :: Resource
    :target: http://pyrs-resource.readthedocs.org/
    :alt: Documentation Status
 
-Project homepage: `<https://github.com/palankai/pyrs-resource>`_
-
-Documentation: `<http://pyrs-resource.readthedocs.org>`_
-
-Issue tracking: `<https://github.com/palankai/pyrs-resource/issues>`_
-
+| Project homepage: `<https://github.com/palankai/pyrs-resource>`_
+| Documentation: yy`<http://pyrs-resource.readthedocs.org>`_
+| Issue tracking: `<https://github.com/palankai/pyrs-resource/issues>`_
 
 What is this package for
 ------------------------
