@@ -154,7 +154,7 @@ class ErrorSchema(schema.Object):
     details = DetailsSchema()
 
     def dump(self, ex):
-        msg = ex.get_message(self['debug'])
+        msg = ex.get_message(self.get_attr('debug', False))
         return super(ErrorSchema, self).dump(msg)
 
 
