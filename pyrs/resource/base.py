@@ -44,28 +44,28 @@ class App(object):
         self, path_info, method, query=None, body=None, headers=None,
         cookies=None, session=None
     ):
-        opts = None
+        meta = None
         req = None
         try:
             endpoint, path = self.adapter.match(path_info, method)
             func = self.functions[endpoint]
-            opts = lib.get_options(func)
+            meta = lib.get_meta(func)
             req = request.Request(
-                opts, self, path, query, body, headers, cookies, session
+                meta, self, path, query, body, headers, cookies, session
             )
             kwargs = req.build()
         except Exception as ex:
-            res = self.handle_client_exceptions(
-                ex, path_info, method, opts, req
+            res = self.handle_exception(
+                ex, path_info, method, meta, req
             )
             return res.build()
 
         try:
             content = func(**kwargs)
-            res = response.Response(content, self, opts, req)
+            res = response.Response(content, self, meta, req)
             return res.build()
         except Exception as ex:
-            res = self.handle_exception(ex, opts, req)
+            res = self.handle_exception(ex, path_info, method, meta, req)
         return res.build()
 
     def add(self, path, resource, prefix=''):
@@ -76,20 +76,12 @@ class App(object):
         else:
             self._add_class(path, resource, prefix)
 
-    def handle_client_exceptions(
-        self, ex, path_info, method, opts=None, req=None
+    def handle_exception(
+        self, ex, path_info, method, meta=None, req=None
     ):
-        ex = self.transform_exception(ex)
-        res = errors.ErrorResponse(ex, self, opts, req)
-        return res
-
-    def handle_exception(self, ex, opts, req):
-        ex = self.transform_exception(ex)
-        res = errors.ErrorResponse(ex, self, opts, req)
-        return res
-
-    def transform_exception(self, ex):
-        return ex
+        return errors.ErrorResponse(
+            content=ex, app=self, opts=meta, request=req
+        )
 
     def add_rule(self, rule):
         self.rules.add(rule)
@@ -109,11 +101,11 @@ class App(object):
         if not prefix:
             prefix = getattr(resource, '_name', lib.get_fqname(resource))
         for member in members:
-            opts = lib.get_options(member)
+            opts = lib.get_meta(member)
             self._add_function(path+opts['werkzeug_path'], member, prefix)
 
     def _add_function(self, path, resource, prefix=''):
-        opts = lib.get_options(resource)
+        opts = lib.get_meta(resource)
         if opts:
             if prefix:
                 prefix += '#'

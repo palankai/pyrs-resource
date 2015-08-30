@@ -43,7 +43,8 @@ class Response(object):
                 headers.update(headers_update)
         if isinstance(self.processor, schema.Schema):
             headers['Content-Type'] = 'application/json'
-            content = self.processor.dump(content)
+            writer = schema.JSONWriter(self.processor)
+            content = writer.write(content)
             return (content, status, headers)
         if callable(self.processor):
             return self.processor(content, status, headers)

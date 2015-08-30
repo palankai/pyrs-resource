@@ -22,7 +22,7 @@ def get_fqname(thing):
     return thing.__module__+'.'+thing.__name__
 
 
-def get_options(resource, key=None, default=None):
+def get_meta(resource, key=None, default=None):
     options = getattr(resource, conf.decorate, None)
     if key is not None:
         return options.get(key, default)

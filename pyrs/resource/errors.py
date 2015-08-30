@@ -65,40 +65,12 @@ class Error(Exception):
         """
         return self.status
 
-    def get_message(self, debug=False):
-        """
-        Should give back a dictionary which will be threated the response body.
-        The message should be conform with the `ErrorSchema`.
-        """
-        res = {
-            'error': self.error or lib.get_fqname(self)
-        }
-        if self.args:
-            res['message'] = self.args[0]
-        if self.description:
-            res['error_description'] = self.description
-        if self.uri:
-            res['error_uri'] = self.uri
-        details = self.get_details(debug)
-        if details:
-            res['details'] = details
-        return res
-
     def get_details(self, debug=False):
         """
         Gives back detailed information about the error and the context.
-        By default its an empty dictionary. The `debug` depends on the debug
-        parameter should give back traceback information and the positional
-        arguments of the exception.
-        As this is part of the message should conform with the `ErrorSchema`.
+        As this is part of the message should conform with the `DetailsSchema`.
         """
-        details = {}
-        if self.details:
-            details = self.details.copy()
-        if debug:
-            details['traceback'] = self.traceback
-            details['args'] = self.args[1:]
-        return details
+        return {}
 
     @classmethod
     def wrap(cls, original):
@@ -121,12 +93,12 @@ class ClientError(Error):
     status = 400
 
 
-class ValidationError(Error):
+class ValidationErrorX(Error):
     status = 500
     error = 'validation_error'
 
 
-class InputValidationError(Error):
+class InputValidationErrorX(Error):
     status = 400
     error = 'invalid_request_format'
 
@@ -153,9 +125,37 @@ class ErrorSchema(schema.Object):
     message = schema.String()
     details = DetailsSchema()
 
-    def dump(self, ex):
-        msg = ex.get_message(self.get_attr('debug', False))
-        return super(ErrorSchema, self).dump(msg)
+    def to_raw(self, value, context=None):
+        raw = {
+            'error': value.error or lib.get_fqname(value)
+        }
+        if value.args and value.args[0]:
+            raw['message'] = value.args[0]
+        if value.description:
+            raw['error_description'] = value.description
+        if value.uri:
+            raw['error_uri'] = value.uri
+        details = self.get_details(value)
+        if details:
+            raw['details'] = details
+        return raw
+
+    def get_details(self, ex):
+        """
+        Gives back detailed information about the error and the context.
+        By default its an empty dictionary. The `debug` depends on the debug
+        parameter should give back traceback information and the positional
+        arguments of the exception.
+        As this is part of the message should conform with the `ErrorSchema`.
+        """
+        details = {}
+        if ex.details:
+            details = ex.details.copy()
+        if self.get_attr('debug', False):
+            details['traceback'] = ex.traceback
+            details['args'] = ex.args[1:]
+        details.update(ex.get_details(self.get_attr('debug', False)))
+        return details
 
 
 class ErrorResponse(response.Response):
@@ -169,3 +169,28 @@ class ErrorResponse(response.Response):
             self.processor = self.content.schema(debug=self.app['debug'])
         else:
             self.processor = ErrorSchema(debug=self.app['debug'])
+
+
+class BadRequestErrorSchema(ErrorSchema):
+    errors = schema.Array()
+
+    def to_raw(self, value, context=None):
+        message = super(BadRequestErrorSchema, self).to_raw(
+            value, context=context
+        )
+        if value.errors:
+            message['errors'] = value.errors
+        return message
+
+
+class BadRequestError(ClientError):
+    """
+    Request cannot be processed because of error.
+    """
+
+    schema = BadRequestErrorSchema
+    error = 'BadRequest'
+
+    def __init__(self, message=None, errors=None, **details):
+        super(BadRequestError, self).__init__(message, **details)
+        self.errors = errors

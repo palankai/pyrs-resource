@@ -6,27 +6,28 @@ Request actually is a builder, it builds request arguments for the endpoint,
 can hold extra information about the application about the whole environment
 and can be passed to the endpoint as well.
 """
-import inspect
-
 from pyrs import schema
-import jsonschema
 
 from . import lib
 from . import errors
 
 
 class Request(object):
+    """
+    This builder class responsible to gather all of necessary information
+    about the request and build the arguments of actual method.
+    """
 
     def __init__(
-        self, opts, app=None, path=None, query=None, body=None, headers=None,
-        auth=None, cookies=None, session=None
+        self, opts=None, app=None, path=None, query=None, body=None,
+        headers=None, auth=None, cookies=None, session=None
     ):
         self.app = app or lib.get_config()
         self.auth = auth
         self.body = body or {}
         self.cookies = cookies
         self.headers = headers or {}
-        self.opts = opts
+        self.opts = opts or {}
         self.path = path or {}
         self.query = query or {}
         self.session = session
@@ -34,6 +35,11 @@ class Request(object):
         self._setup_injects()
 
     def build(self):
+        """
+        Build kwargs for calling the method.
+
+        :raises pyrs.resource.errors.BadRequestError:
+        """
         kwargs = {}
         kwargs.update(self._inject(
             self._inject_body, self.body,
@@ -88,11 +94,10 @@ class Request(object):
         Can be an instance (or a subclass) of `schema.Object`.
         In that case the schema `load` will be executed
         """
-        if inspect.isclass(opt) and issubclass(opt, schema.Object):
-            opt = opt()
-        if isinstance(opt, schema.Object):
-            try:
-                return opt.load(value)
-            except jsonschema.exceptions.ValidationError as ex:
-                raise errors.InputValidationError(cause=ex)
-        return value
+        if opt is None:
+            return value
+        reader = schema.JSONFormReader(opt)
+        try:
+            return reader.read(value)
+        except schema.ValidationErrors as ex:
+            raise errors.BadRequestError(errors=ex.errors)

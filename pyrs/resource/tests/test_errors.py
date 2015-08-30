@@ -1,4 +1,3 @@
-import json
 import unittest
 
 from .. import errors
@@ -28,11 +27,9 @@ class TestSchema(unittest.TestCase):
         try:
             raise errors.Error('message', 12)
         except Exception as ex:
-            content = errors.ErrorSchema(debug=False).dump(ex)
+            content = errors.ErrorSchema(debug=False).to_raw(ex)
             name = ex.__class__.__module__+'.'+ex.__class__.__name__
             pass
-
-        content = json.loads(content)
 
         self.assertEqual(content, {
             'error': name,
@@ -47,12 +44,22 @@ class TestSchema(unittest.TestCase):
         try:
             raise Special()
         except Exception as ex:
-            content = errors.ErrorSchema(debug=False).dump(ex)
-
-        content = json.loads(content)
+            content = errors.ErrorSchema(debug=False).to_raw(ex)
 
         self.assertEqual(content, {
             'error': 'special',
             'error_description': 'description of error',
             'error_uri': 'http://example.com/special',
+        })
+
+
+class TestBadRequestError(unittest.TestCase):
+
+    def test_basic_behaviour(self):
+        ex = errors.BadRequestError('Request can\'t be serialized')
+        msg = errors.BadRequestErrorSchema().to_raw(ex)
+
+        self.assertEqual(msg, {
+            'error': 'BadRequest',
+            'message': 'Request can\'t be serialized'
         })
