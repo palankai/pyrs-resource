@@ -57,7 +57,7 @@ class TestBadRequestError(unittest.TestCase):
 
     def test_basic_behaviour(self):
         ex = errors.BadRequestError('Request can\'t be serialized')
-        msg = ex.dump()
+        msg = errors.BadRequestErrorSchema().to_raw(ex)
 
         self.assertEqual(msg, {
             'error': 'BadRequest',

@@ -69,7 +69,9 @@ class TestBasicCases(unittest.TestCase):
         content, status, headers = self.app.dispatch(
             '/user/', 'POST', body={'id': '"hello"'}
         )
+        err = json.loads(content)
+
         self.assertEqual(status, 400)
         self.assertEqual(
-            json.loads(content), {'error': 'invalid_request_format'}
+            err['error'], 'BadRequest'
         )

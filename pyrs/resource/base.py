@@ -55,7 +55,7 @@ class App(object):
             )
             kwargs = req.build()
         except Exception as ex:
-            res = self.handle_client_exceptions(
+            res = self.handle_client_exception(
                 ex, path_info, method, opts, req
             )
             return res.build()
@@ -76,20 +76,13 @@ class App(object):
         else:
             self._add_class(path, resource, prefix)
 
-    def handle_client_exceptions(
+    def handle_client_exception(
         self, ex, path_info, method, opts=None, req=None
     ):
-        ex = self.transform_exception(ex)
-        res = errors.ErrorResponse(ex, self, opts, req)
-        return res
+        return errors.ErrorResponse(ex, self, opts, req)
 
     def handle_exception(self, ex, opts, req):
-        ex = self.transform_exception(ex)
-        res = errors.ErrorResponse(ex, self, opts, req)
-        return res
-
-    def transform_exception(self, ex):
-        return ex
+        return errors.ErrorResponse(ex, self, opts, req)
 
     def add_rule(self, rule):
         self.rules.add(rule)

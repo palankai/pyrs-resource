@@ -100,4 +100,4 @@ class Request(object):
         try:
             return reader.read(value)
         except schema.ValidationErrors as ex:
-            raise errors.InputValidationError(cause=ex)
+            raise errors.BadRequestError(errors=ex.errors)
