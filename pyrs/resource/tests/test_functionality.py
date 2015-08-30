@@ -61,7 +61,7 @@ class TestBasicCases(unittest.TestCase):
         self.assertEqual(status, 500)
         self.assertEqual(
             json.loads(content)['error'],
-            'jsonschema.exceptions.ValidationError'
+            'pyrs.schema.exceptions.ValidationErrors'
         )
 
     def test_invalid_request(self):

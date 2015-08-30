@@ -149,13 +149,13 @@ class TestParseInput(unittest.TestCase):
             limit = schema.Integer()
 
         value_part_cls = req._parse_value(
-            {'search': 'hello'}, MySchema
+            {'search': 'hello'}, MySchema()
         )
         value_full_cls = req._parse_value(
             {'search': 'hello', 'limit': '1'}, MySchema()
         )
         value_part_obj = req._parse_value(
-            {'search': 'hello'}, MySchema
+            {'search': 'hello'}, MySchema()
         )
         value_full_obj = req._parse_value(
             {'search': 'hello', 'limit': '1'}, MySchema()

@@ -153,9 +153,8 @@ class ErrorSchema(schema.Object):
     message = schema.String()
     details = DetailsSchema()
 
-    def dump(self, ex):
-        msg = ex.dump(self.get_attr('debug', False))
-        return super(ErrorSchema, self).dump(msg)
+    def to_raw(self, value, context=None):
+        return value.dump(self.get_attr('debug', False))
 
 
 class ErrorResponse(response.Response):
