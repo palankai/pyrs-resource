@@ -77,9 +77,11 @@ class App(object):
             self._add_class(path, resource, prefix)
 
     def handle_exception(
-        self, ex, path_info, method, opts=None, req=None
+        self, ex, path_info, method, meta=None, req=None
     ):
-        return errors.ErrorResponse(ex, self, opts, req)
+        return errors.ErrorResponse(
+            content=ex, app=self, opts=meta, request=req
+        )
 
     def add_rule(self, rule):
         self.rules.add(rule)
