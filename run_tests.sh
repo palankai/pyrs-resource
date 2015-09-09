@@ -2,8 +2,12 @@
 
 set -e
 
-python -m unittest discover .
+if [ "$1" = "" ]; then
+    python -m unittest discover .
 
-./test_set_trace.sh
+    ./test_set_trace.sh
 
-flake8 pyrs
+    flake8 pyrs
+else
+    python -m unittest $@
+fi

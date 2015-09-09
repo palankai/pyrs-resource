@@ -36,6 +36,7 @@ class App(object):
             self.add(*resource)
         self.adapter = self.rules.bind(self['host'])
         self.setup_hooks()
+        self.setup()
 
     def __getitem__(self, name):
         return self.config[name]
@@ -92,6 +93,9 @@ class App(object):
     def setup_hooks(self):
         pass
 
+    def setup(self):
+        pass
+
     def _add_class(self, path, resource, prefix=''):
         members = lib.get_resource_members(resource)
         if not members:
@@ -121,3 +125,9 @@ class App(object):
 
     def _make_rule(self, path, methods, endpoint):
         return werkzeug.routing.Rule(path, methods=methods, endpoint=endpoint)
+
+    def __call__(self, environ, start_response):
+        response = werkzeug.wrappers.Response(
+            'Hello world!', mimetype='text/plain'
+        )
+        return response(environ, start_response)
