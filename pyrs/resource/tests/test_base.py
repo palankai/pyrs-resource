@@ -148,7 +148,7 @@ class TestDispatch(unittest.TestCase):
             path='/path/', method='POST', query_string={'limit': 5},
             data={'username': 'testuser'}
         )
-        res = self.app.dispatch(req, '/path/', 'POST')
+        res = self.app.dispatch(req)
 
         self.assertEqual(
             res.json,

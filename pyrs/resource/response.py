@@ -43,6 +43,8 @@ class ResponseBuilder(object):
         )
 
     def build(self):
+        if isinstance(self.content, Response):
+            return self.content
         status = self.status
         headers = self.headers.copy()
         content = self.content

@@ -14,7 +14,11 @@ from . import lib
 from . import errors
 
 
-class Request(wrappers.Request):
+class RequestMixin(object):
+
+    meta = None
+    app = None
+    kwargs = None
 
     @property
     def route(self):
@@ -37,12 +41,27 @@ class Request(wrappers.Request):
             return self.form
         return self.text
 
+    def begin(self, app):
+        self.app = app
+
+    def forward(self, func, kwargs):
+        self.func = func
+        self.meta = lib.get_meta(func)
+        self.kwargs = kwargs
+        self.kwargs.update_by_request(self)
+
+    def __call__(self):
+        return self.func(**self.kwargs)
+
+
+class Request(wrappers.Request, RequestMixin):
+    pass
+
 
 class Arguments(dict):
 
-    def __init__(self, directory, meta, kwargs):
+    def __init__(self, meta, kwargs):
         super(Arguments, self).__init__(kwargs)
-        self.directory = directory
         self.meta = meta
         self.request = None
 

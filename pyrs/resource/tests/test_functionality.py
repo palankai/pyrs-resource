@@ -50,7 +50,7 @@ class TestBasicCases(unittest.TestCase):
         req = request.req(
             path='/user/', method='GET'
         )
-        res = self.app.dispatch(req, '/user/', 'GET')
+        res = self.app.dispatch(req)
         self.assertEqual(res.json, self.app_users)
 
     def test_get_user_by_name(self):
@@ -58,7 +58,7 @@ class TestBasicCases(unittest.TestCase):
         req = request.req(
             path='/user/admin', method='GET'
         )
-        res = self.app.dispatch(req, '/user/admin', 'GET')
+        res = self.app.dispatch(req)
         self.assertEqual(res.json, self.app_users[0])
 
     def test_get_user_by_name_invalid_response(self):
@@ -66,7 +66,7 @@ class TestBasicCases(unittest.TestCase):
         req = request.req(
             path='/user/invalid', method='GET'
         )
-        res = self.app.dispatch(req, '/user/invalid', 'GET')
+        res = self.app.dispatch(req)
 
         self.assertEqual(res.status_code, 500)
         self.assertEqual(
@@ -79,7 +79,7 @@ class TestBasicCases(unittest.TestCase):
         req = request.req(
             path='/user/', method='POST', data={'id': '"hello"'}
         )
-        res = self.app.dispatch(req, '/user/', 'POST')
+        res = self.app.dispatch(req)
 
         self.assertEqual(res.status_code, 400)
         self.assertEqual(

@@ -33,7 +33,7 @@ class Directory(object):
         endpoint, kwargs = self.adapter.match(path_info, method)
         func = self.functions[endpoint]
         meta = lib.get_meta(func)
-        return func, self.root.Arguments(self, meta, kwargs)
+        return func, self.root.Arguments(meta, kwargs)
 
     def add(self, path, resource, prefix=''):
         if inspect.isfunction(resource):
@@ -88,32 +88,28 @@ class Directory(object):
 class Dispatcher(Directory):
 
     def dispatch(self, request, path_info=None, method='GET'):
-        meta = None
         if path_info is None:
             path_info, method = request.route
         try:
             func, kwargs = self.match(path_info, method)
-            meta = kwargs.meta
-            kwargs.update_by_request(request)
+            request.forward(func, kwargs)
         except Exception as ex:
-            res = self.handle_exception(
-                ex, path_info, method, meta, request
-            )
+            res = self.handle_exception(ex, request)
             return res.build()
 
         try:
-            content = func(**kwargs)
-            res = response.ResponseBuilder(content, self, meta, request)
+            content = request()
+            res = response.ResponseBuilder(
+                content, self, request.meta, request
+            )
             return res.build()
         except Exception as ex:
-            res = self.handle_exception(ex, path_info, method, meta, request)
+            res = self.handle_exception(ex, request)
             return res.build()
 
-    def handle_exception(
-        self, ex, path_info, method, meta=None, req=None
-    ):
+    def handle_exception(self, ex, request):
         return errors.ErrorResponseBuilder(
-            content=ex, app=self, opts=meta, request=req
+            content=ex, app=self, opts=request.meta, request=request
         )
 
 
@@ -121,6 +117,10 @@ class App(Dispatcher):
 
     def __getitem__(self, name):
         return self.config[name]
+
+    def dispatch(self, request):
+        request.begin(self)
+        return super(App, self).dispatch(request)
 
     @request.Request.application
     def __call__(self, request):
