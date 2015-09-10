@@ -1,10 +1,10 @@
-import json
 import unittest
 
 from pyrs import schema
 
 from .. import base
 from .. import resource
+from .. import request
 
 
 class TestBasicCases(unittest.TestCase):
@@ -22,7 +22,7 @@ class TestBasicCases(unittest.TestCase):
 
         class UserResource(object):
 
-            @resource.GET
+            @resource.GET(response=schema.Array(items=UserSchema()))
             def get_users(self):
                 return app_users
 
@@ -33,7 +33,7 @@ class TestBasicCases(unittest.TestCase):
                         # Workaround of pyrs-schema issue #14
                         return user.copy()
 
-            @resource.POST(request=UserSchema, inject_body='body')
+            @resource.POST(body=UserSchema)
             def create_user(self, body):
                 body['id'] = 12
                 return body
@@ -47,31 +47,41 @@ class TestBasicCases(unittest.TestCase):
 
     def test_get_users(self):
 
-        content, status, headers = self.app.dispatch('/user/', 'GET')
-        self.assertEqual(content, self.app_users)
+        req = request.req(
+            path='/user/', method='GET'
+        )
+        res = self.app.dispatch(req, '/user/', 'GET')
+        self.assertEqual(res.json, self.app_users)
 
     def test_get_user_by_name(self):
 
-        content, status, headers = self.app.dispatch('/user/admin', 'GET')
-        self.assertEqual(json.loads(content), self.app_users[0])
+        req = request.req(
+            path='/user/admin', method='GET'
+        )
+        res = self.app.dispatch(req, '/user/admin', 'GET')
+        self.assertEqual(res.json, self.app_users[0])
 
     def test_get_user_by_name_invalid_response(self):
 
-        content, status, headers = self.app.dispatch('/user/invalid', 'GET')
-        self.assertEqual(status, 500)
+        req = request.req(
+            path='/user/invalid', method='GET'
+        )
+        res = self.app.dispatch(req, '/user/invalid', 'GET')
+
+        self.assertEqual(res.status_code, 500)
         self.assertEqual(
-            json.loads(content)['error'],
+            res.json['error'],
             'pyrs.schema.exceptions.ValidationErrors'
         )
 
     def test_invalid_request(self):
 
-        content, status, headers = self.app.dispatch(
-            '/user/', 'POST', body={'id': '"hello"'}
+        req = request.req(
+            path='/user/', method='POST', data={'id': '"hello"'}
         )
-        err = json.loads(content)
+        res = self.app.dispatch(req, '/user/', 'POST')
 
-        self.assertEqual(status, 400)
+        self.assertEqual(res.status_code, 400)
         self.assertEqual(
-            err['error'], 'BadRequest'
+            res.json['error'], 'BadRequest'
         )

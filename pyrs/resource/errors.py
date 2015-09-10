@@ -158,7 +158,7 @@ class ErrorSchema(schema.Object):
         return details
 
 
-class ErrorResponse(response.Response):
+class ErrorResponseBuilder(response.ResponseBuilder):
 
     def setup(self):
         if not isinstance(self.content, Error):
@@ -166,9 +166,11 @@ class ErrorResponse(response.Response):
         self.status = self.content.get_status()
         self.headers = self.content.get_headers()
         if self.content.schema:
-            self.processor = self.content.schema(debug=self.app['debug'])
+            self.processor = self.content.schema(
+                debug=self.app.config['debug']
+            )
         else:
-            self.processor = ErrorSchema(debug=self.app['debug'])
+            self.processor = ErrorSchema(debug=self.app.config['debug'])
 
 
 class BadRequestErrorSchema(ErrorSchema):

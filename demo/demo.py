@@ -1,9 +1,17 @@
-from pyrs.resource import App
+from pyrs.resource import *
+
+
+class UserResource(object):
+
+    @GET
+    def get_users(self):
+        return 'Hello world!'
+
 
 class DemoApplication(App):
 
     def setup(self):
-        pass
+        self.add('/', UserResource)
 
 
 application = DemoApplication()

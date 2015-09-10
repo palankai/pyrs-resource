@@ -8,34 +8,23 @@ from .. import response
 class TestResponse(unittest.TestCase):
 
     def test_basic_response(self):
-        res = response.Response('content')
-        value = res.build()
+        res = response.ResponseBuilder('content').build()
 
-        self.assertEqual(value, ('content', 200, {}))
+        self.assertEqual(res.text, 'content')
 
     def test_status_setup(self):
-        res = response.Response(None, opts={'status': 201})
+        res = response.ResponseBuilder(None, opts={'status': 201}).build()
 
-        self.assertEqual(res.build(), (None, 201, {}))
+        self.assertEqual(res.status_code, 201)
 
     def test_header_setup(self):
-        res = response.Response(
+        res = response.ResponseBuilder(
             None, opts={'headers': {'content-type': 'application/json'}}
-        )
+        ).build()
 
         self.assertEqual(
-            res.build(), (None, 200, {'content-type': 'application/json'})
+            dict(res.headers), {'content-type': 'application/json'}
         )
-
-
-class TestCustomProcessor(unittest.TestCase):
-
-    def test_function(self):
-        def proc(content, status, headers):
-            return str(content), 201, {'X-Test': 'test'}
-
-        res = response.Response(1231, opts={'response': proc})
-        self.assertEqual(res.build(), ('1231', 201, {'X-Test': 'test'}))
 
 
 class TestBuildContent(unittest.TestCase):
@@ -44,53 +33,75 @@ class TestBuildContent(unittest.TestCase):
         class MySchema(schema.Object):
             num = schema.Integer()
 
-        res = response.Response({'num': 12}, opts={'response': MySchema})
+        res = response.ResponseBuilder(
+            {'num': 12}, opts={'response': MySchema}
+        ).build()
+        expected = '{"num": 12}'
+        self.assertEqual(res.text, expected)
+        self.assertEqual(res.status_code, 200)
         self.assertEqual(
-            res.build(),
-            ('{"num": 12}', 200, {'Content-Type': 'application/json'})
+            dict(res.headers),
+            {
+                'Content-Type': 'application/json',
+                'Content-Length': str(len(expected))
+            }
         )
 
     def test_build_tuple_content_status(self):
         class MySchema(schema.Object):
             num = schema.Integer()
 
-        res = response.Response(
+        res = response.ResponseBuilder(
             ({'num': 12}, 201), opts={'response': MySchema}
-        )
+        ).build()
+        expected = '{"num": 12}'
+        self.assertEqual(res.text, expected)
+        self.assertEqual(res.status_code, 201)
         self.assertEqual(
-            res.build(),
-            ('{"num": 12}', 201, {'Content-Type': 'application/json'})
+            dict(res.headers),
+            {
+                'Content-Type': 'application/json',
+                'Content-Length': str(len(expected))
+            }
         )
 
     def test_build_tuple_content_headers(self):
         class MySchema(schema.Object):
             num = schema.Integer()
 
-        res = response.Response(
+        res = response.ResponseBuilder(
             ({'num': 12}, {'X-Test': 'hello'}), opts={'response': MySchema}
-        )
+        ).build()
+
+        expected = '{"num": 12}'
+        self.assertEqual(res.text, expected)
+        self.assertEqual(res.status_code, 200)
         self.assertEqual(
-            res.build(),
-            (
-                '{"num": 12}',
-                200,
-                {'Content-Type': 'application/json', 'X-Test': 'hello'}
-            )
+            dict(res.headers),
+            {
+                'Content-Type': 'application/json',
+                'X-Test': 'hello',
+                'Content-Length': str(len(expected))
+            }
         )
 
     def test_build_tuple_content_status_headers(self):
         class MySchema(schema.Object):
             num = schema.Integer()
 
-        res = response.Response(
+        res = response.ResponseBuilder(
             ({'num': 12}, 201, {'X-Test': 'hello'}),
             opts={'response': MySchema}
-        )
+        ).build()
+
+        expected = '{"num": 12}'
+        self.assertEqual(res.text, expected)
+        self.assertEqual(res.status_code, 201)
         self.assertEqual(
-            res.build(),
-            (
-                '{"num": 12}',
-                201,
-                {'Content-Type': 'application/json', 'X-Test': 'hello'}
-            )
+            dict(res.headers),
+            {
+                'Content-Type': 'application/json',
+                'X-Test': 'hello',
+                'Content-Length': str(len(expected))
+            }
         )

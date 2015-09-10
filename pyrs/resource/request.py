@@ -7,29 +7,103 @@ can hold extra information about the application about the whole environment
 and can be passed to the endpoint as well.
 """
 from pyrs import schema
+from werkzeug import wrappers
+from werkzeug.test import EnvironBuilder
 
 from . import lib
 from . import errors
 
 
-class Request(object):
+class Request(wrappers.Request):
+
+    @property
+    def route(self):
+        return self.path, self.method
+
+    @property
+    def text(self):
+        return self.get_data(as_text=True)
+
+    @property
+    def is_form(self):
+        return self.headers['Content-Type'] in (
+            'application/x-www-form-urlencoded',
+            'multipart/form-data'
+        )
+
+    @property
+    def body(self):
+        if self.is_form:
+            return self.form
+        return self.text
+
+
+class Arguments(dict):
+
+    def __init__(self, directory, meta, kwargs):
+        super(Arguments, self).__init__(kwargs)
+        self.directory = directory
+        self.meta = meta
+        self.request = None
+
+    def update_by_request(self, request):
+        self.request = request
+        self._parse_query()
+        self._parse_body()
+
+    def _parse_query(self):
+        s = self.meta.get('query')
+        value = self._parse_value(self.request.args, s)
+        if isinstance(s, schema.Schema) and s.get_attr('name'):
+            self.update({s.get_attr('name'): value})
+        else:
+            self.update(value)
+
+    def _parse_body(self):
+        if self.request.method not in ['POST', 'PUT', 'PATCH']:
+            return
+        s = self.meta.get('body')
+        value = self._parse_value(self.request.body, s)
+        if isinstance(s, schema.Schema) and s.get_attr('name'):
+            self.update({s.get_attr('name'): value})
+        else:
+            self.update({'body': value})
+
+    def _parse_value(self, value, opt):
+        """Parse a value based on options.
+        The option can be `None` means shouldn't be not parsed
+        Can be an instance (or a subclass) of `schema.Object`.
+        In that case the schema `load` will be executed
+        """
+        if opt is None:
+            return value
+        reader = schema.JSONFormReader(opt)
+        try:
+            return reader.read(value)
+        except schema.ValidationErrors as ex:
+            raise errors.BadRequestError(errors=ex.errors)
+
+
+def req(*args, **kwargs):
+    env_builder = EnvironBuilder(*args, **kwargs)
+    return Request(env_builder.get_environ())
+
+
+class RequestOld(object):
     """
     This builder class responsible to gather all of necessary information
     about the request and build the arguments of actual method.
     """
 
     def __init__(
-        self, opts=None, app=None, path=None, query=None, body=None,
-        headers=None, auth=None, cookies=None, session=None
+        self, opts=None, app=None, path=None,
+        auth=None, cookies=None, session=None
     ):
         self.app = app or lib.get_config()
         self.auth = auth
-        self.body = body or {}
         self.cookies = cookies
-        self.headers = headers or {}
         self.opts = opts or {}
         self.path = path or {}
-        self.query = query or {}
         self.session = session
 
         self._setup_injects()
@@ -40,16 +114,7 @@ class Request(object):
 
         :raises pyrs.resource.errors.BadRequestError:
         """
-        kwargs = {}
-        kwargs.update(self._inject(
-            self._inject_body, self.body,
-            self.opts.get(self.app['body_schema_option'], None)
-        ))
-        kwargs.update(self._inject(self._inject_path, self.path))
-        kwargs.update(self._inject(
-            self._inject_query, self.query,
-            self.opts.get(self.app['query_schema_option'], None)
-        ))
+        kwargs = self.path
         kwargs.update(self._inject(self._inject_app, self.app))
         kwargs.update(self._inject(self._inject_auth, self.auth))
         kwargs.update(self._inject(self._inject_cookies, self.cookies))
@@ -61,10 +126,6 @@ class Request(object):
         return self.headers[name]
 
     def _setup_injects(self):
-        self._inject_body = self._get_inject('inject_body', False)
-        self._inject_path = self._get_inject('inject_path', False)
-        self._inject_query = self._get_inject('inject_query', False)
-
         self._inject_app = self._get_inject('inject_app', True)
         self._inject_auth = self._get_inject('inject_auth', True)
         self._inject_cookies = self._get_inject('inject_cookies', True)

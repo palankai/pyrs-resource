@@ -1,11 +1,25 @@
 import inspect
+import json
+
+from werkzeug import wrappers
 
 from pyrs import schema
 
 from . import lib
 
 
-class Response(object):
+class Response(wrappers.Response):
+
+    @property
+    def text(self):
+        return self.get_data(True)
+
+    @property
+    def json(self):
+        return json.loads(self.text)
+
+
+class ResponseBuilder(object):
     """Generic response class"""
 
     def __init__(self, content, app=None, opts=None, request=None):
@@ -45,7 +59,4 @@ class Response(object):
             headers['Content-Type'] = 'application/json'
             writer = schema.JSONWriter(self.processor)
             content = writer.write(content)
-            return (content, status, headers)
-        if callable(self.processor):
-            return self.processor(content, status, headers)
-        return (content, status, headers)
+        return Response(response=content, status=status, headers=headers)

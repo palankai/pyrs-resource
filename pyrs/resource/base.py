@@ -8,66 +8,32 @@ from . import response
 from . import errors
 
 
-class App(object):
-    """
-    Resource application, provide routing and execution
+class Directory(object):
 
-    :param list hooks: List of hook classes (check :py:mod:`.hooks`)
-    :param list resources: Expected items `(path, resource class, [namespace])`
-    :param config: optional configuration values (updated :py:mod:`.conf`)
-    """
-    hooks = []
+    #: Tuple should be presented as ('/path', Resource, [namespace])
+    resources = None
 
-    #: List of rules, will be **extended** by App(resources=[])
-    #: Tuple should be presented: ('path', Resource, [namespace])
-    resources = []
+    Arguments = request.Arguments
 
-    def __init__(self, hooks=None, resources=None, **config):
-        #: Store the configuration (copied from :py:mod:`.conf`)
+    def __init__(self, parent=None, **config):
+        self._parent = parent
         self.config = lib.get_config(getattr(self, 'config', {}))
-        self.functions = {}
-        if hooks is not None:
-            self.hooks = hooks
         self.config.update(config)
+        self.functions = {}
         self.rules = werkzeug.routing.Map()
-        for resource in self.resources:
+        self.adapter = self.rules.bind(self.config['host'])
+        for resource in self.resources or ():
             self.add(*resource)
-        for resource in resources or ():
-            self.add(*resource)
-        self.adapter = self.rules.bind(self['host'])
-        self.setup_hooks()
         self.setup()
 
-    def __getitem__(self, name):
-        return self.config[name]
+    def setup(self):
+        pass
 
-    def dispatch(
-        self, path_info, method, query=None, body=None, headers=None,
-        cookies=None, session=None
-    ):
-        meta = None
-        req = None
-        try:
-            endpoint, path = self.adapter.match(path_info, method)
-            func = self.functions[endpoint]
-            meta = lib.get_meta(func)
-            req = request.Request(
-                meta, self, path, query, body, headers, cookies, session
-            )
-            kwargs = req.build()
-        except Exception as ex:
-            res = self.handle_exception(
-                ex, path_info, method, meta, req
-            )
-            return res.build()
-
-        try:
-            content = func(**kwargs)
-            res = response.Response(content, self, meta, req)
-            return res.build()
-        except Exception as ex:
-            res = self.handle_exception(ex, path_info, method, meta, req)
-        return res.build()
+    def match(self, path_info, method):
+        endpoint, kwargs = self.adapter.match(path_info, method)
+        func = self.functions[endpoint]
+        meta = lib.get_meta(func)
+        return func, self.root.Arguments(self, meta, kwargs)
 
     def add(self, path, resource, prefix=''):
         if inspect.isfunction(resource):
@@ -77,24 +43,16 @@ class App(object):
         else:
             self._add_class(path, resource, prefix)
 
-    def handle_exception(
-        self, ex, path_info, method, meta=None, req=None
-    ):
-        return errors.ErrorResponse(
-            content=ex, app=self, opts=meta, request=req
-        )
+    @property
+    def parent(self):
+        return self._parent or self
 
-    def add_rule(self, rule):
-        self.rules.add(rule)
-
-    def set_function(self, name, resource):
-        self.functions[name] = resource
-
-    def setup_hooks(self):
-        pass
-
-    def setup(self):
-        pass
+    @property
+    def root(self):
+        _root = self
+        while _root._parent:
+            _root = _root.parent
+        return _root
 
     def _add_class(self, path, resource, prefix=''):
         members = lib.get_resource_members(resource)
@@ -115,8 +73,8 @@ class App(object):
                 prefix += '#'
             name = prefix+opts['name']
             rule = self._make_rule(path, opts['methods'], name)
-            self.add_rule(rule)
-            self.set_function(name, resource)
+            self.rules.add(rule)
+            self.functions[name] = resource
         else:
             raise ValueError(
                 "The given function (%s) is not and endpoint endpoint"
@@ -126,8 +84,44 @@ class App(object):
     def _make_rule(self, path, methods, endpoint):
         return werkzeug.routing.Rule(path, methods=methods, endpoint=endpoint)
 
-    def __call__(self, environ, start_response):
-        response = werkzeug.wrappers.Response(
-            'Hello world!', mimetype='text/plain'
+
+class Dispatcher(Directory):
+
+    def dispatch(self, request, path_info=None, method='GET'):
+        meta = None
+        if path_info is None:
+            path_info, method = request.route
+        try:
+            func, kwargs = self.match(path_info, method)
+            meta = kwargs.meta
+            kwargs.update_by_request(request)
+        except Exception as ex:
+            res = self.handle_exception(
+                ex, path_info, method, meta, request
+            )
+            return res.build()
+
+        try:
+            content = func(**kwargs)
+            res = response.ResponseBuilder(content, self, meta, request)
+            return res.build()
+        except Exception as ex:
+            res = self.handle_exception(ex, path_info, method, meta, request)
+            return res.build()
+
+    def handle_exception(
+        self, ex, path_info, method, meta=None, req=None
+    ):
+        return errors.ErrorResponseBuilder(
+            content=ex, app=self, opts=meta, request=req
         )
-        return response(environ, start_response)
+
+
+class App(Dispatcher):
+
+    def __getitem__(self, name):
+        return self.config[name]
+
+    @request.Request.application
+    def __call__(self, request):
+        return self.dispatch(request)

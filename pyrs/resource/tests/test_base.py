@@ -1,4 +1,3 @@
-import json
 import unittest
 
 from pyrs import schema
@@ -7,6 +6,7 @@ import werkzeug
 from .. import base
 from .. import lib
 from .. import resource
+from .. import request
 
 
 class TestConfiguration(unittest.TestCase):
@@ -30,24 +30,6 @@ class TestConfiguration(unittest.TestCase):
         self.assertEqual(app['debug'], True)
         with self.assertRaises(KeyError):
             app['doesnt_exists_config_key']
-
-    def test_resource_by_declaration(self):
-        @resource.GET
-        def func1(self):
-            pass
-
-        @resource.GET
-        def func2(self):
-            pass
-
-        class MyApp(base.App):
-            resources = [
-                ('/path1', func1)
-            ]
-        app = MyApp(resources=[('/path2', func2)])
-        self.assertEqual(
-            sorted(list(app.functions.keys())), ['func1', 'func2']
-        )
 
 
 class TestRules(unittest.TestCase):
@@ -143,7 +125,7 @@ class TestDispatch(unittest.TestCase):
     def setUp(self):
 
         class Query(schema.Object):
-            limit = schema.Integer()
+            limit = schema.String()
 
         class Req(schema.Object):
             username = schema.String()
@@ -151,25 +133,32 @@ class TestDispatch(unittest.TestCase):
         class Res(schema.Object):
             username = schema.String()
             pk = schema.Integer()
+            query = Query()
 
         class Resource(object):
             @resource.RPC(request=Req, response=Res, query=Query)
-            def func(self, username, limit, **qry):
-                return {'pk': 1, 'username': username}
+            def func(self, body, **qry):
+                return {'pk': 1, 'username': body['username'], 'query': qry}
 
         self.app = base.App()
         self.app.add('/path', Resource())
 
     def test_dispatch(self):
-        content, status, headers = self.app.dispatch(
-            '/path/', 'POST',
-            query={'limit': '5'},
-            body={'username': 'testuser'}
+        req = request.req(
+            path='/path/', method='POST', query_string={'limit': 5},
+            data={'username': 'testuser'}
         )
-        content = json.loads(content)
+        res = self.app.dispatch(req, '/path/', 'POST')
 
         self.assertEqual(
-            content, {'pk': 1, 'username': 'testuser'}
+            res.json,
+            {'pk': 1, 'username': 'testuser', 'query': {'limit': '5'}}
         )
-        self.assertEqual(status, 200)
-        self.assertEqual(headers, {'Content-Type': 'application/json'})
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(
+            dict(res.headers),
+            {
+                'Content-Type': 'application/json',
+                'Content-Length': str(len(res.text))
+            }
+        )
