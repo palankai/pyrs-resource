@@ -1,9 +1,10 @@
 import inspect
 
+from pyrs import schema
 import werkzeug
 
 from . import lib
-from . import request
+from . import gateway
 from . import response
 from . import errors
 
@@ -12,8 +13,6 @@ class Directory(object):
 
     #: Tuple should be presented as ('/path', Resource, [namespace])
     resources = None
-
-    Arguments = request.Arguments
 
     def __init__(self, parent=None, **config):
         self._parent = parent
@@ -32,8 +31,7 @@ class Directory(object):
     def match(self, path_info, method):
         endpoint, kwargs = self.adapter.match(path_info, method)
         func = self.functions[endpoint]
-        meta = lib.get_meta(func)
-        return func, self.root.Arguments(meta, kwargs)
+        return func, kwargs
 
     def add(self, path, resource, prefix=''):
         if inspect.isfunction(resource):
@@ -85,22 +83,55 @@ class Directory(object):
         return werkzeug.routing.Rule(path, methods=methods, endpoint=endpoint)
 
 
+def _text_plain(value, option):
+    return value
+
+
+def _application_json_reader(value, option):
+    return schema.JSONReader(option).read(value)
+
+
+def _application_json_writer(value, option):
+    return schema.JSONWriter(option).read(value)
+
+
+def _form_reader(value, option):
+    return schema.JSONFormReader(option).read(value)
+
+
 class Dispatcher(Directory):
+
+    consumers = {
+        None: _application_json_reader,
+        'query': _form_reader,
+        'text/plain': _text_plain,
+        'application/json': _application_json_reader,
+        'application/x-www-form-urlencoded': _form_reader,
+        'multipart/form-data': _form_reader
+    }
+
+    producers = {
+        None: _application_json_writer,
+        'text/plain': _text_plain,
+        'application/json': _application_json_writer,
+    }
+
+    def __init__(self, parent=None, **config):
+        super(Dispatcher, self).__init__(parent, **config)
+        self.producers = self.producers.copy()
+        self.consumers = self.consumers.copy()
 
     def dispatch(self, request, path_info=None, method='GET'):
         if path_info is None:
-            path_info, method = request.route
+            path_info, method = request.get_route()
         try:
             func, kwargs = self.match(path_info, method)
-            request.forward(func, kwargs)
-        except Exception as ex:
-            res = self.handle_exception(ex, request)
-            return res.build()
+            meta = lib.get_meta(func)
+            kwargs.update(request.parse(meta))
 
-        try:
-            content = request()
+            content = func(**kwargs)
             res = response.ResponseBuilder(
-                content, self, request.meta, request
+                content, self, request.options, request
             )
             return res.build()
         except Exception as ex:
@@ -109,7 +140,7 @@ class Dispatcher(Directory):
 
     def handle_exception(self, ex, request):
         return errors.ErrorResponseBuilder(
-            content=ex, app=self, opts=request.meta, request=request
+            content=ex, app=self, opts=request.options, request=request
         )
 
 
@@ -119,9 +150,9 @@ class App(Dispatcher):
         return self.config[name]
 
     def dispatch(self, request):
-        request.begin(self)
+        request.setup(app=self)
         return super(App, self).dispatch(request)
 
-    @request.Request.application
+    @gateway.Request.application
     def __call__(self, request):
         return self.dispatch(request)

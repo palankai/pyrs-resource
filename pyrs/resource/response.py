@@ -10,6 +10,11 @@ from . import lib
 
 class Response(wrappers.Response):
 
+    producer = None
+
+    def setup(self, meta):
+        self.meta = meta
+
     @property
     def text(self):
         return self.get_data(True)
@@ -17,6 +22,14 @@ class Response(wrappers.Response):
     @property
     def json(self):
         return json.loads(self.text)
+
+    def set_data(self, value):
+        super(Response, self).set_data(value)
+
+    def get_data(self, as_text=False):
+        return super(Response, self).get_data(as_text=as_text)
+
+    data = property(get_data, set_data)
 
 
 class ResponseBuilder(object):

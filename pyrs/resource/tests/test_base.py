@@ -6,7 +6,7 @@ import werkzeug
 from .. import base
 from .. import lib
 from .. import resource
-from .. import request
+from .. import gateway
 
 
 class TestConfiguration(unittest.TestCase):
@@ -136,7 +136,7 @@ class TestDispatch(unittest.TestCase):
             query = Query()
 
         class Resource(object):
-            @resource.RPC(request=Req, response=Res, query=Query)
+            @resource.RPC(body=Req, response=Res, query=Query)
             def func(self, body, **qry):
                 return {'pk': 1, 'username': body['username'], 'query': qry}
 
@@ -144,7 +144,7 @@ class TestDispatch(unittest.TestCase):
         self.app.add('/path', Resource())
 
     def test_dispatch(self):
-        req = request.req(
+        req = gateway.Request.from_values(
             path='/path/', method='POST', query_string={'limit': 5},
             data={'username': 'testuser'}
         )
