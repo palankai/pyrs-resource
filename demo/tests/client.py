@@ -17,4 +17,4 @@ class TestResponse(Response):
         return json.loads(self.text)
 
 
-app = test.Client(demo.application, response_wrapper=TestResponse)
+app = test.Client(demo.application.wsgi, response_wrapper=TestResponse)

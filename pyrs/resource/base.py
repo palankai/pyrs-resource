@@ -121,16 +121,18 @@ class Dispatcher(Directory):
         self.producers = self.producers.copy()
         self.consumers = self.consumers.copy()
 
-    def dispatch(self, request, path_info=None, method='GET'):
-        if path_info is None:
-            path_info, method = request.get_route()
+    def dispatch(self, request, path=None):
+        if path is None:
+            path = request.path
         response = gateway.Response()
         try:
-            func, kwargs = self.match(path_info, method)
+            func, kwargs = self.match(path, request.method)
             meta = lib.get_meta(func)
             kwargs.update(request.parse(meta))
 
             content = func(**kwargs)
+            while isinstance(content, Dispatcher):
+                content = content.dispatch(request)
             if isinstance(content, gateway.Response):
                 return content
             response.parse(request, content)
@@ -145,9 +147,12 @@ class App(Dispatcher):
     debug = False
 
     def dispatch(self, request):
-        request.setup(app=self)
+        # request.setup(app=self)
+        request.app = self
         return super(App, self).dispatch(request)
 
-    @gateway.Request.application
-    def __call__(self, request):
-        return self.dispatch(request)
+    def wsgi(self, environ, start_response):
+        environ['app'] = self
+        request = gateway.Request(environ)
+        response = self.dispatch(request)
+        return response(environ, start_response)

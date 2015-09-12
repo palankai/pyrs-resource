@@ -17,14 +17,13 @@ from . import errors
 
 class RequestMixin(object):
 
-    app = None
-    options = None
+    @property
+    def app(self):
+        return self.environ.get('app')
 
-    def setup(self, app):
-        self.app = app
-
-    def get_route(self):
-        return self.path, self.method
+    @app.setter
+    def app(self, app):
+        self.environ['app'] = app
 
     def get_content_type(self):
         return self.headers.get('Content-Type', None)
@@ -116,23 +115,7 @@ class RequestMixin(object):
             raise
 
 
-class Request(RequestMixin, wrappers.Request):
-
-    @classmethod
-    def from_values(cls, *args, **kwargs):
-        app = kwargs.pop('app', None)
-        request = super(Request, cls).from_values(*args, **kwargs)
-        request.setup(app)
-        return request
-
-
-def _application_json_writer(value, option):
-    if not option:
-        return value
-    return schema.JSONWriter(option).write(value)
-
-
-class Response(wrappers.Response):
+class ResponseCompatibilityMixin(object):
 
     @property
     def text(self):
@@ -142,6 +125,9 @@ class Response(wrappers.Response):
     def json(self):
         return json.loads(self.text)
 
+
+class ResponseParserMixin(object):
+
     def parse(self, request, value=''):
         if isinstance(value, Exception):
             self.set_data(self._parse_exception(request, value))
@@ -150,9 +136,9 @@ class Response(wrappers.Response):
 
     def _parse_value(self, request, value):
         self._parse_request(request)
-        if self.get_option(request):
-            producer = self.get_producer(request)
-            return producer(value, self.get_option(request))
+        if self._get_option(request):
+            producer = self._get_producer(request)
+            return producer(value, self._get_option(request))
         return value
 
     def _parse_exception(self, request, value):
@@ -167,7 +153,7 @@ class Response(wrappers.Response):
         )
         self.status_code = value.get_status()
         self.headers.extend(value.get_headers())
-        return self.get_error_producer(request)(value, option)
+        return self._get_error_producer(request)(value, option)
 
     def _parse_request(self, request):
         self.mimetype = request.headers.get(
@@ -176,15 +162,32 @@ class Response(wrappers.Response):
         self.status_code = request.options.get('status', 200)
         self.headers.extend(request.options.get('headers', {}))
 
-    def get_option(self, request):
+    def _get_option(self, request):
         return request.options.get('output')
 
-    def get_producer(self, request):
+    def _get_producer(self, request):
         return request.app.producers.get(
             request.headers.get(
                 'Accept', request.app.default_mimetype
             )
         )
 
-    def get_error_producer(self, request):
+    def _get_error_producer(self, request):
         return request.app.producers.get(request.app.error_mimetype)
+
+
+class Request(wrappers.Request, RequestMixin):
+
+    @classmethod
+    def from_values(cls, *args, **kwargs):
+        app = kwargs.pop('app', None)
+        request = super(Request, cls).from_values(*args, **kwargs)
+        request.environ['app'] = app
+        # request.setup(app)
+        return request
+
+
+class Response(
+    wrappers.Response, ResponseCompatibilityMixin, ResponseParserMixin
+):
+    pass
