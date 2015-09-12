@@ -142,27 +142,21 @@ class Response(wrappers.Response):
     def json(self):
         return json.loads(self.text)
 
-    def parse(self, request, value=None):
-        self.status_code = request.options.get('status', 200)
-        self.headers.extend(request.options.get('headers', {}))
-        if not self.get_option(request) and not value:
-            return
+    def parse(self, request, value=''):
         if isinstance(value, Exception):
-            value = self.parse_exception(value, request)
-            self.mimetype = request.app.error_mimetype
-        elif self.get_option(request):
-            value = self.parse_value(value, request)
-            self.mimetype = request.headers.get(
-                'Accept', request.app.default_mimetype
-            )
-        self.set_data(value)
+            self.set_data(self._parse_exception(request, value))
+        else:
+            self.set_data(self._parse_value(request, value))
 
-    def parse_value(self, value, request):
+    def _parse_value(self, request, value):
+        self._parse_request(request)
         if self.get_option(request):
             producer = self.get_producer(request)
             return producer(value, self.get_option(request))
+        return value
 
-    def parse_exception(self, value, request):
+    def _parse_exception(self, request, value):
+        self.mimetype = request.app.error_mimetype
         if not isinstance(value, errors.Error):
             value = errors.Error.wrap(value)
         schema = value.schema
@@ -174,6 +168,13 @@ class Response(wrappers.Response):
         self.status_code = value.get_status()
         self.headers.extend(value.get_headers())
         return self.get_error_producer(request)(value, option)
+
+    def _parse_request(self, request):
+        self.mimetype = request.headers.get(
+            'Accept', request.app.default_mimetype
+        )
+        self.status_code = request.options.get('status', 200)
+        self.headers.extend(request.options.get('headers', {}))
 
     def get_option(self, request):
         return request.options.get('output')
