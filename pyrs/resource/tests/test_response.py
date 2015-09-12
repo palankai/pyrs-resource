@@ -11,23 +11,23 @@ class TestResponse(unittest.TestCase):
     def test_basic_response(self):
         request = gateway.Request.from_values(app=base.App())
         request.parse({})
-        res = gateway.ResponseBuilder(
-            'content', request=request
-        ).build()
+        response = gateway.Response()
+        response.parse(request, 'content')
 
-        self.assertEqual(res.text, 'content')
+        self.assertEqual(response.text, 'content')
 
     def test_status_setup(self):
         request = gateway.Request.from_values(app=base.App())
         request.parse({'status': 201})
-        response = gateway.Response(request)
+        response = gateway.Response()
+        response.parse(request)
         self.assertEqual(response.status_code, 201)
 
     def test_header_setup(self):
         request = gateway.Request.from_values(app=base.App())
         request.parse({'headers': {'X-Special': 'application/json'}})
-        response = gateway.Response(request)
-
+        response = gateway.Response()
+        response.parse(request)
         self.assertEqual(
             response.text, ''
         )
@@ -44,16 +44,16 @@ class TestBuildContent(unittest.TestCase):
 
         request = gateway.Request.from_values(app=base.App())
         request.parse({'output': MySchema})
-        res = gateway.ResponseBuilder(
-            {'num': 12}, opts={'output': MySchema},
-            request=request
-        )
-        res = res.build()
+
+        response = gateway.Response()
+        response.parse(request, {'num': 12})
+
         expected = '{"num": 12}'
-        self.assertEqual(res.text, expected)
-        self.assertEqual(res.status_code, 200)
+
+        self.assertEqual(response.text, expected)
+        self.assertEqual(response.status_code, 200)
         self.assertEqual(
-            dict(res.headers),
+            dict(response.headers),
             {
                 'Content-Type': 'application/json',
                 'Content-Length': str(len(expected))

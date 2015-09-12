@@ -6,7 +6,6 @@ Request actually is a builder, it builds request arguments for the endpoint,
 can hold extra information about the application about the whole environment
 and can be passed to the endpoint as well.
 """
-import inspect
 import json
 
 from pyrs import schema
@@ -135,15 +134,6 @@ def _application_json_writer(value, option):
 
 class Response(wrappers.Response):
 
-    def __init__(self, request, response=None, *args, **kwargs):
-        self.request = request
-        self.app = request.app
-        super(Response, self).__init__(*args, **kwargs)
-        self.status_code = self.request.options.get('status', 200)
-        self.headers.extend(self.request.options.get('headers', {}))
-        if response:
-            self.set_data(response)
-
     @property
     def text(self):
         return self.get_data(True)
@@ -152,72 +142,48 @@ class Response(wrappers.Response):
     def json(self):
         return json.loads(self.text)
 
-    def set_data(self, value):
-        if not self.get_option() and not value:
+    def parse(self, request, value=None):
+        self.status_code = request.options.get('status', 200)
+        self.headers.extend(request.options.get('headers', {}))
+        if not self.get_option(request) and not value:
             return
         if isinstance(value, Exception):
-            value = self.parse_exception(value)
-            self.mimetype = self.app.error_mimetype
-        elif self.get_option():
-            value = self.parse_value(value)
-            self.mimetype = self.request.headers.get(
-                'Accept', self.app.default_mimetype
+            value = self.parse_exception(value, request)
+            self.mimetype = request.app.error_mimetype
+        elif self.get_option(request):
+            value = self.parse_value(value, request)
+            self.mimetype = request.headers.get(
+                'Accept', request.app.default_mimetype
             )
-        super(Response, self).set_data(value)
+        self.set_data(value)
 
-    def parse_value(self, value):
-        if self.get_option():
-            producer = self.get_producer()
-            return producer(value, self.get_option())
+    def parse_value(self, value, request):
+        if self.get_option(request):
+            producer = self.get_producer(request)
+            return producer(value, self.get_option(request))
 
-    def parse_exception(self, value):
+    def parse_exception(self, value, request):
         if not isinstance(value, errors.Error):
             value = errors.Error.wrap(value)
         schema = value.schema
         if not schema:
             schema = errors.ErrorSchema
         option = schema(
-            debug=self.app.debug
+            debug=request.app.debug
         )
         self.status_code = value.get_status()
         self.headers.extend(value.get_headers())
-        return self.get_error_producer()(value, option)
+        return self.get_error_producer(request)(value, option)
 
-    def get_data(self, as_text=False):
-        return super(Response, self).get_data(as_text=as_text)
+    def get_option(self, request):
+        return request.options.get('output')
 
-    data = property(get_data, set_data)
-
-    def get_option(self):
-        return self.request.options.get('output')
-
-    def get_producer(self):
-        return self.app.producers.get(
-            self.request.headers.get('Accept', self.app.default_mimetype)
+    def get_producer(self, request):
+        return request.app.producers.get(
+            request.headers.get(
+                'Accept', request.app.default_mimetype
+            )
         )
 
-    def get_error_producer(self):
-        return self.app.producers.get(self.app.error_mimetype)
-
-
-class ResponseBuilder(object):
-    """Generic response class"""
-
-    def __init__(self, content, app=None, opts=None, request=None):
-        self.content = content
-        self.opts = opts or {}
-        self.request = request
-        self.setup()
-
-    def setup(self):
-        self.option = self.opts.get('output')
-        self.status = self.opts.get('status')
-        self.headers = self.opts.get('headers', {})
-        if inspect.isclass(self.option):
-            self.option = self.option()
-
-    def build(self):
-        if isinstance(self.content, Response):
-            return self.content
-        response = Response(self.request, self.content)
-        return response
+    def get_error_producer(self, request):
+        return request.app.producers.get(request.app.error_mimetype)

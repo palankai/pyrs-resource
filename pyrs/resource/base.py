@@ -124,6 +124,7 @@ class Dispatcher(Directory):
     def dispatch(self, request, path_info=None, method='GET'):
         if path_info is None:
             path_info, method = request.get_route()
+        response = gateway.Response()
         try:
             func, kwargs = self.match(path_info, method)
             meta = lib.get_meta(func)
@@ -132,20 +133,11 @@ class Dispatcher(Directory):
             content = func(**kwargs)
             if isinstance(content, gateway.Response):
                 return content
-            res = gateway.Response(request)
-            res.data = content
-            res = gateway.ResponseBuilder(
-                content, self, request.options, request
-            )
-            return res.build()
+            response.parse(request, content)
+            return response
         except Exception as ex:
-            res = self.handle_exception(ex, request)
-            return res.build()
-
-    def handle_exception(self, ex, request):
-        return gateway.ResponseBuilder(
-            content=ex, app=self, opts=request.options, request=request
-        )
+            response.parse(request, ex)
+            return response
 
 
 class App(Dispatcher):
