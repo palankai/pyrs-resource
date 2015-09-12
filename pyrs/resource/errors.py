@@ -2,7 +2,6 @@ from pyrs import schema
 import six
 
 from . import lib
-from . import response
 
 
 class Error(Exception):
@@ -156,21 +155,6 @@ class ErrorSchema(schema.Object):
             details['args'] = ex.args[1:]
         details.update(ex.get_details(self.get_attr('debug', False)))
         return details
-
-
-class ErrorResponseBuilder(response.ResponseBuilder):
-
-    def setup(self):
-        if not isinstance(self.content, Error):
-            self.content = Error.wrap(self.content)
-        self.status = self.content.get_status()
-        self.headers = self.content.get_headers()
-        if self.content.schema:
-            self.processor = self.content.schema(
-                debug=self.app.config['debug']
-            )
-        else:
-            self.processor = ErrorSchema(debug=self.app.config['debug'])
 
 
 class BadRequestErrorSchema(ErrorSchema):

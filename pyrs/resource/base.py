@@ -5,8 +5,6 @@ import werkzeug
 
 from . import lib
 from . import gateway
-from . import response
-from . import errors
 
 
 class Directory(object):
@@ -92,7 +90,7 @@ def _application_json_reader(value, option):
 
 
 def _application_json_writer(value, option):
-    return schema.JSONWriter(option).read(value)
+    return schema.JSONWriter(option).write(value)
 
 
 def _form_reader(value, option):
@@ -111,10 +109,12 @@ class Dispatcher(Directory):
     }
 
     producers = {
-        None: _application_json_writer,
         'text/plain': _text_plain,
         'application/json': _application_json_writer,
     }
+
+    default_mimetype = 'application/json'
+    error_mimetype = 'application/json'
 
     def __init__(self, parent=None, **config):
         super(Dispatcher, self).__init__(parent, **config)
@@ -130,7 +130,11 @@ class Dispatcher(Directory):
             kwargs.update(request.parse(meta))
 
             content = func(**kwargs)
-            res = response.ResponseBuilder(
+            if isinstance(content, gateway.Response):
+                return content
+            res = gateway.Response(request)
+            res.data = content
+            res = gateway.ResponseBuilder(
                 content, self, request.options, request
             )
             return res.build()
@@ -139,15 +143,14 @@ class Dispatcher(Directory):
             return res.build()
 
     def handle_exception(self, ex, request):
-        return errors.ErrorResponseBuilder(
+        return gateway.ResponseBuilder(
             content=ex, app=self, opts=request.options, request=request
         )
 
 
 class App(Dispatcher):
 
-    def __getitem__(self, name):
-        return self.config[name]
+    debug = False
 
     def dispatch(self, request):
         request.setup(app=self)

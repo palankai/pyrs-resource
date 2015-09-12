@@ -26,18 +26,18 @@ class TestBasicCases(unittest.TestCase):
 
         class UserResource(object):
 
-            @resource.GET(response=schema.Array(items=UserSchema()))
+            @resource.GET(output=schema.Array(items=UserSchema()))
             def get_users(self):
                 return app_users
 
-            @resource.GET(path='/<name>', response=UserSchema)
+            @resource.GET(path='/<name>', output=UserSchema)
             def get_user_by_name(self, name):
                 for user in self.get_users():
                     if user['name'] == name:
                         # Workaround of pyrs-schema issue #14
                         return user.copy()
 
-            @resource.POST(body=UserSchema, response=UserSchemaResponse)
+            @resource.POST(body=UserSchema, output=UserSchemaResponse)
             def create_user(self, body):
                 body['id'] = 12
                 return body

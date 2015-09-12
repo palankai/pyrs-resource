@@ -9,29 +9,6 @@ from .. import resource
 from .. import gateway
 
 
-class TestConfiguration(unittest.TestCase):
-
-    def test_default_configs(self):
-        app = base.App()
-
-        app['decorate']
-        with self.assertRaises(KeyError):
-            app['doesnt_exists_config_key']
-
-    def test_declared_config(self):
-        class MyApp(base.App):
-            config = {
-                'special_config': 'special'
-            }
-
-        app = MyApp(debug=True)
-        app['decorate']
-        self.assertEqual(app['special_config'], 'special')
-        self.assertEqual(app['debug'], True)
-        with self.assertRaises(KeyError):
-            app['doesnt_exists_config_key']
-
-
 class TestRules(unittest.TestCase):
 
     def setUp(self):
@@ -136,7 +113,7 @@ class TestDispatch(unittest.TestCase):
             query = Query()
 
         class Resource(object):
-            @resource.RPC(body=Req, response=Res, query=Query)
+            @resource.RPC(body=Req, output=Res, query=Query)
             def func(self, body, **qry):
                 return {'pk': 1, 'username': body['username'], 'query': qry}
 
