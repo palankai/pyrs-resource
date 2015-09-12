@@ -14,7 +14,6 @@ from werkzeug import wrappers
 import six
 
 from . import errors
-from . import lib
 
 
 class RequestMixin(object):
@@ -161,7 +160,9 @@ class Response(wrappers.Response):
             self.mimetype = self.app.error_mimetype
         elif self.get_option():
             value = self.parse_value(value)
-            self.mimetype = self.request.headers.get('Accept', self.app.default_mimetype)
+            self.mimetype = self.request.headers.get(
+                'Accept', self.app.default_mimetype
+            )
         super(Response, self).set_data(value)
 
     def parse_value(self, value):

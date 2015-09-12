@@ -5,6 +5,7 @@ from pyrs import schema
 from .. import base
 from .. import gateway
 
+
 class TestResponse(unittest.TestCase):
 
     def test_basic_response(self):
