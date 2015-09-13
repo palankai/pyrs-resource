@@ -1,10 +1,93 @@
+import json
 import unittest
 
 from .client import app
+from .. import demo
+
 
 class TestIntegration(unittest.TestCase):
 
-    def test_sanity(self):
-        r = app.get()
+    def test_get_users(self):
+        r = app.get('/user/')
 
-        self.assertEqual(r.text, 'Hello world!')
+        self.assertEqual(r.json, demo.users)
+
+    def test_get_user_by_pk(self):
+        r = app.get('/user/{}'.format(1))
+        self.assertEqual(r.json, demo.users[0])
+
+    def test_get_user_by_name(self):
+        r = app.get('/user/{}'.format('admin'))
+        self.assertEqual(r.json, demo.users[0])
+
+    def test_get_user_groups(self):
+        r = app.get('/user/{}/groups'.format(1))
+        self.assertEqual(r.json, ['administrators', 'users'])
+
+    def test_form_post(self):
+        # Will not modify the 'database' just emulate it
+        r = app.post('/user/', data={
+            'username': 'editor', 'email': 'editor@example.com'
+        })
+
+        self.assertEqual(r.status_code, 201)
+        self.assertEqual(
+            r.json,
+            {'pk':5, 'username': 'editor', 'email': 'editor@example.com'}
+        )
+
+    def test_json_post(self):
+        # Will not modify the 'database' just emulate it
+        user = {'username': 'editor', 'email': 'editor@example.com'}
+        r = app.post('/user/', data=json.dumps(user))
+
+        self.assertEqual(r.status_code, 201)
+        self.assertEqual(
+            r.json,
+            {'pk':5, 'username': 'editor', 'email': 'editor@example.com'}
+        )
+
+    def test_patching_user(self):
+        # Will not modify the 'database' just emulate it
+        r = app.patch('/user/{}'.format(1), data={
+            'email': 'updated@example.com'
+        })
+
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(
+            r.json,
+            {'pk':1, 'username': 'admin', 'email': 'updated@example.com'}
+        )
+
+    def test_set_user(self):
+        # Will not modify the 'database' just emulate it
+        r = app.put('/user/', data={
+            'pk':1, 'email': 'updated@example.com', 'username':'admin'
+        })
+
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(
+            r.json,
+            {'pk':1, 'username': 'admin', 'email': 'updated@example.com'}
+        )
+
+    def test_delete_user(self):
+        # Will not modify the 'database' just emulate it
+        r = app.delete('/user/{}'.format(1))
+
+        self.assertEqual(r.text, '')
+        self.assertEqual(r.status_code, 200)
+
+
+class TestErrors(unittest.TestCase):
+
+    def test_form_post_with_extra_pk(self):
+        # Will not modify the 'database' just emulate it
+        r = app.post('/user/', data={
+            'username': 'editor', 'email': 'editor@example.com', 'pk': 5
+        })
+
+        self.assertEqual(r.status_code, 400)
+        self.assertEqual(r.json['error'], 'BadRequest')
+        self.assertEqual(r.json['errors'][0]['error'], 'ValidationError')
+        self.assertEqual(len(r.json['errors']), 1)

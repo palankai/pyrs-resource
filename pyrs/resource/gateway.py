@@ -180,7 +180,7 @@ class ProducerMixin(object):
         if self._get_option(request):
             producer = self._get_producer(request)
             return producer(value, self._get_option(request))
-        return value
+        return value or ''
 
     def _parse_request(self, request):
         self.mimetype = request.headers.get(

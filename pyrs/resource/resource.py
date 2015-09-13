@@ -64,7 +64,7 @@ def RPC(_func=None, **kwargs):
 def PUT(_func=None, **kwargs):
     """
     Decorator function
-    Ensure the given function will be available for GET method
+    Ensure the given function will be available for PUT method
     """
     return endpoint(_func, methods=['PUT'], **kwargs)
 
@@ -72,7 +72,7 @@ def PUT(_func=None, **kwargs):
 def DELETE(_func=None, **kwargs):
     """
     Decorator function
-    Ensure the given function will be available for GET method
+    Ensure the given function will be available for DELETE method
     """
     return endpoint(_func, methods=['DELETE'], **kwargs)
 
@@ -80,6 +80,6 @@ def DELETE(_func=None, **kwargs):
 def PATCH(_func=None, **kwargs):
     """
     Decorator function
-    Ensure the given function will be available for GET method
+    Ensure the given function will be available for PATCH method
     """
     return endpoint(_func, methods=['PATCH'], **kwargs)

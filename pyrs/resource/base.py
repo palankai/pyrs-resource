@@ -10,14 +10,13 @@ class Directory(object):
 
     #: Tuple should be presented as ('/path', Resource, [namespace])
     resources = None
+    host = 'localhost'
 
     def __init__(self, parent=None, **config):
         self._parent = parent
-        self.config = lib.get_config(getattr(self, 'config', {}))
-        self.config.update(config)
         self.functions = {}
         self.rules = werkzeug.routing.Map()
-        self.adapter = self.rules.bind(self.config['host'])
+        self.adapter = self.rules.bind(self.host)
         for resource in self.resources or ():
             self.add(*resource)
         self.setup()
