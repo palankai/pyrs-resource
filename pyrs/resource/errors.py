@@ -4,6 +4,61 @@ import six
 from . import lib
 
 
+class DetailsSchema(schema.Object):
+    """
+    Details part of the error schema. Additional properties possible.
+    """
+    traceback = schema.Array()
+    args = schema.Array()
+
+    class Attrs:
+        additional = True
+
+
+class ErrorSchema(schema.Object):
+    """
+    Describe how the error response should look like. Goal of this schema is
+    a minimalistic but usable error response.
+    """
+    error = schema.String(required=True)
+    error_description = schema.String()
+    error_uri = schema.String()
+    message = schema.String()
+    details = DetailsSchema()
+
+    def to_raw(self, value, context=None):
+        raw = {
+            'error': value.error or lib.get_fqname(value)
+        }
+        if value.args and value.args[0]:
+            raw['message'] = value.args[0]
+        if value.description:
+            raw['error_description'] = value.description
+        if value.uri:
+            raw['error_uri'] = value.uri
+        details = self.get_details(value)
+        if details:
+            raw['details'] = details
+        return raw
+
+    def get_details(self, ex):
+        """
+        Gives back detailed information about the error and the context.
+        By default its an empty dictionary. The `debug` depends on the debug
+        parameter should give back traceback information and the positional
+        arguments of the exception.
+        As this is part of the message should conform with the `ErrorSchema`.
+        """
+        details = {}
+        if ex.details:
+            details = ex.details.copy()
+        if self.get_attr('debug', False):
+            details['traceback'] = ex.traceback
+            details['args'] = ex.args[1:]
+        details.update(ex.get_details(self.get_attr('debug', False)))
+        return details
+
+
 class Error(Exception):
     """
     This is the base exception of this framework.
@@ -36,7 +91,7 @@ class Error(Exception):
     #: You can specify your schema class for validating your message
     #: By default the application default error schema the `ErrorSchema` will
     #: be used
-    schema = None
+    schema = ErrorSchema
 
     def __init__(self, *args, **details):
         super(Error, self).__init__(*args)
@@ -100,61 +155,6 @@ class ValidationErrorX(Error):
 class InputValidationErrorX(Error):
     status = 400
     error = 'invalid_request_format'
-
-
-class DetailsSchema(schema.Object):
-    """
-    Details part of the error schema. Additional properties possible.
-    """
-    traceback = schema.Array()
-    args = schema.Array()
-
-    class Attrs:
-        additional = True
-
-
-class ErrorSchema(schema.Object):
-    """
-    Describe how the error response should look like. Goal of this schema is
-    a minimalistic but usable error response.
-    """
-    error = schema.String(required=True)
-    error_description = schema.String()
-    error_uri = schema.String()
-    message = schema.String()
-    details = DetailsSchema()
-
-    def to_raw(self, value, context=None):
-        raw = {
-            'error': value.error or lib.get_fqname(value)
-        }
-        if value.args and value.args[0]:
-            raw['message'] = value.args[0]
-        if value.description:
-            raw['error_description'] = value.description
-        if value.uri:
-            raw['error_uri'] = value.uri
-        details = self.get_details(value)
-        if details:
-            raw['details'] = details
-        return raw
-
-    def get_details(self, ex):
-        """
-        Gives back detailed information about the error and the context.
-        By default its an empty dictionary. The `debug` depends on the debug
-        parameter should give back traceback information and the positional
-        arguments of the exception.
-        As this is part of the message should conform with the `ErrorSchema`.
-        """
-        details = {}
-        if ex.details:
-            details = ex.details.copy()
-        if self.get_attr('debug', False):
-            details['traceback'] = ex.traceback
-            details['args'] = ex.args[1:]
-        details.update(ex.get_details(self.get_attr('debug', False)))
-        return details
 
 
 class BadRequestErrorSchema(ErrorSchema):

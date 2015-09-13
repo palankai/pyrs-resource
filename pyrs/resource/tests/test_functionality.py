@@ -81,7 +81,7 @@ class TestBasicCases(unittest.TestCase):
     def test_valid_request(self):
 
         req = gateway.Request.from_values(
-            path='/user/', method='POST', app=self.app, data={
+            path='/user/', method='POST', data={
                 'id': 12,
                 'name': 'hello',
                 'email': 'email',

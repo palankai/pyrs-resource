@@ -2,32 +2,31 @@ import unittest
 
 from pyrs import schema
 
-from .. import base
 from .. import gateway
 
 
 class TestResponse(unittest.TestCase):
 
     def test_basic_response(self):
-        request = gateway.Request.from_values(app=base.App())
+        request = gateway.Request.from_values()
         request.parse({})
         response = gateway.Response()
-        response.parse(request, 'content')
+        response.produce(request, 'content')
 
         self.assertEqual(response.text, 'content')
 
     def test_status_setup(self):
-        request = gateway.Request.from_values(app=base.App())
+        request = gateway.Request.from_values()
         request.parse({'status': 201})
         response = gateway.Response()
-        response.parse(request)
+        response.produce(request)
         self.assertEqual(response.status_code, 201)
 
     def test_header_setup(self):
-        request = gateway.Request.from_values(app=base.App())
+        request = gateway.Request.from_values()
         request.parse({'headers': {'X-Special': 'application/json'}})
         response = gateway.Response()
-        response.parse(request)
+        response.produce(request)
         self.assertEqual(
             response.text, ''
         )
@@ -42,11 +41,11 @@ class TestBuildContent(unittest.TestCase):
         class MySchema(schema.Object):
             num = schema.Integer()
 
-        request = gateway.Request.from_values(app=base.App())
+        request = gateway.Request.from_values()
         request.parse({'output': MySchema})
 
         response = gateway.Response()
-        response.parse(request, {'num': 12})
+        response.produce(request, {'num': 12})
 
         expected = '{"num": 12}'
 

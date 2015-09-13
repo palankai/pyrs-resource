@@ -15,18 +15,35 @@ import six
 from . import errors
 
 
+def _text_plain(value, option):
+    return value
+
+
+def _application_json_reader(value, option):
+    return schema.JSONReader(option).read(value)
+
+
+def _form_reader(value, option):
+    return schema.JSONFormReader(option).read(value)
+
+
+def _application_json_writer(value, option):
+    return schema.JSONWriter(option).write(value)
+
+
 class RequestMixin(object):
 
-    @property
-    def app(self):
-        return self.environ.get('app')
-
-    @app.setter
-    def app(self, app):
-        self.environ['app'] = app
+    consumers = {
+        None: _application_json_reader,
+        'query': _form_reader,
+        'text/plain': _text_plain,
+        'application/json': _application_json_reader,
+        'application/x-www-form-urlencoded': _form_reader,
+        'multipart/form-data': _form_reader
+    }
 
     def get_content_type(self):
-        return self.headers.get('Content-Type', None)
+        return self.headers.get('Content-Type') or None
 
     def get_text(self):
         return self.get_data(as_text=True, cache=True, parse_form_data=False)
@@ -52,10 +69,10 @@ class RequestMixin(object):
         return self.get_text()
 
     def get_consumer(self):
-        return self.app.consumers.get(self.get_content_type())
+        return self.consumers.get(self.get_content_type())
 
     def get_query_consumer(self):
-        return self.app.consumers.get('query')
+        return self.consumers.get('query')
 
     def parse(self, options, **kwargs):
         if kwargs:
@@ -115,24 +132,48 @@ class RequestMixin(object):
             raise
 
 
-class ResponseCompatibilityMixin(object):
+class CompatibilityMixin(object):
 
     @property
     def text(self):
-        return self.get_data(True)
+        return self.get_data(as_text=True)
 
     @property
     def json(self):
         return json.loads(self.text)
 
 
-class ResponseParserMixin(object):
+class ExceptionMixin(object):
 
-    def parse(self, request, value=''):
-        if isinstance(value, Exception):
-            self.set_data(self._parse_exception(request, value))
-        else:
-            self.set_data(self._parse_value(request, value))
+    error_mimetype = 'application/json'
+
+    def produce_exception(self, ex):
+        self.mimetype = self.error_mimetype
+        if not isinstance(ex, errors.Error):
+            ex = errors.Error.wrap(ex)
+        option = ex.schema(debug=self.debug)
+        self.status_code = ex.get_status()
+        self.headers.extend(ex.get_headers())
+        self.set_data(schema.JSONWriter(option).write(ex))
+        return self
+
+    @classmethod
+    def from_exception(cls, ex):
+        return cls().produce_exception(ex)
+
+
+class ProducerMixin(object):
+
+    producers = {
+        'text/plain': _text_plain,
+        'application/json': _application_json_writer,
+    }
+
+    debug = False
+
+    def produce(self, request, value=''):
+        self.set_data(self._parse_value(request, value))
+        return self
 
     def _parse_value(self, request, value):
         self._parse_request(request)
@@ -141,23 +182,9 @@ class ResponseParserMixin(object):
             return producer(value, self._get_option(request))
         return value
 
-    def _parse_exception(self, request, value):
-        self.mimetype = request.app.error_mimetype
-        if not isinstance(value, errors.Error):
-            value = errors.Error.wrap(value)
-        schema = value.schema
-        if not schema:
-            schema = errors.ErrorSchema
-        option = schema(
-            debug=request.app.debug
-        )
-        self.status_code = value.get_status()
-        self.headers.extend(value.get_headers())
-        return self._get_error_producer(request)(value, option)
-
     def _parse_request(self, request):
         self.mimetype = request.headers.get(
-            'Accept', request.app.default_mimetype
+            'Accept', self.default_mimetype
         )
         self.status_code = request.options.get('status', 200)
         self.headers.extend(request.options.get('headers', {}))
@@ -166,28 +193,19 @@ class ResponseParserMixin(object):
         return request.options.get('output')
 
     def _get_producer(self, request):
-        return request.app.producers.get(
+        return self.producers.get(
             request.headers.get(
-                'Accept', request.app.default_mimetype
+                'Accept', self.default_mimetype
             )
         )
 
-    def _get_error_producer(self, request):
-        return request.app.producers.get(request.app.error_mimetype)
-
 
 class Request(wrappers.Request, RequestMixin):
-
-    @classmethod
-    def from_values(cls, *args, **kwargs):
-        app = kwargs.pop('app', None)
-        request = super(Request, cls).from_values(*args, **kwargs)
-        request.environ['app'] = app
-        # request.setup(app)
-        return request
+    pass
 
 
 class Response(
-    wrappers.Response, ResponseCompatibilityMixin, ResponseParserMixin
+    wrappers.Response, CompatibilityMixin, ProducerMixin,
+    ExceptionMixin
 ):
-    pass
+    default_mimetype = 'application/json'

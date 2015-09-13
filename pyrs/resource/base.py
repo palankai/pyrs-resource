@@ -1,6 +1,5 @@
 import inspect
 
-from pyrs import schema
 import werkzeug
 
 from . import lib
@@ -81,78 +80,26 @@ class Directory(object):
         return werkzeug.routing.Rule(path, methods=methods, endpoint=endpoint)
 
 
-def _text_plain(value, option):
-    return value
-
-
-def _application_json_reader(value, option):
-    return schema.JSONReader(option).read(value)
-
-
-def _application_json_writer(value, option):
-    return schema.JSONWriter(option).write(value)
-
-
-def _form_reader(value, option):
-    return schema.JSONFormReader(option).read(value)
-
-
 class Dispatcher(Directory):
-
-    consumers = {
-        None: _application_json_reader,
-        'query': _form_reader,
-        'text/plain': _text_plain,
-        'application/json': _application_json_reader,
-        'application/x-www-form-urlencoded': _form_reader,
-        'multipart/form-data': _form_reader
-    }
-
-    producers = {
-        'text/plain': _text_plain,
-        'application/json': _application_json_writer,
-    }
-
-    default_mimetype = 'application/json'
-    error_mimetype = 'application/json'
-
-    def __init__(self, parent=None, **config):
-        super(Dispatcher, self).__init__(parent, **config)
-        self.producers = self.producers.copy()
-        self.consumers = self.consumers.copy()
 
     def dispatch(self, request, path=None):
         if path is None:
             path = request.path
-        response = gateway.Response()
         try:
             func, kwargs = self.match(path, request.method)
             meta = lib.get_meta(func)
             kwargs.update(request.parse(meta))
 
             content = func(**kwargs)
-            while isinstance(content, Dispatcher):
-                content = content.dispatch(request)
             if isinstance(content, gateway.Response):
                 return content
-            response.parse(request, content)
-            return response
+            return gateway.Response().produce(request, content)
         except Exception as ex:
-            response.parse(request, ex)
-            return response
+            return gateway.Response.from_exception(ex)
 
 
 class App(Dispatcher):
 
-    debug = False
-
-    def dispatch(self, request):
-        # request.setup(app=self)
-        request.app = self
-        return super(App, self).dispatch(request)
-
-    def wsgi(self, environ, start_response):
-        environ['app'] = self
-        request = gateway.Request(environ)
-        response = self.dispatch(request)
-        return response(environ, start_response)
+    @gateway.Request.application
+    def wsgi(self, request):
+        return self.dispatch(request)
