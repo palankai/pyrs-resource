@@ -95,7 +95,7 @@ class UserResource(object):
                 return True
         return False
 
-    @FORWARD(path='/<int:pk>/groups', forward=GroupsForUserResource)
+    @FORWARD(path='/<int:pk>/groups/', forward=GroupsForUserResource)
     def get_user_groups(self, scope, pk, path='/'):
         resource = GroupsForUserResource(pk)
         return scope.forward(resource, path)

@@ -66,13 +66,13 @@ class Directory(object):
             if prefix:
                 prefix += '#'
             name = prefix+opts['name']
+            self.rules.add(self._make_rule(path, opts['methods'], name))
             if 'forward' in opts:
-                rule = self._make_rule(
-                    path+'/<path:path>', opts['methods'], name
-                )
-                self.rules.add(rule)
-            rule = self._make_rule(path, opts['methods'], name)
-            self.rules.add(rule)
+                if not path.endswith('/'):
+                    path += '/'
+                self.rules.add(self._make_rule(
+                    path+'<path:path>', opts['methods'], name
+                ))
             self.functions[name] = resource
         else:
             raise ValueError(

@@ -92,7 +92,7 @@ class TestIntegration(unittest.TestCase):
 class TestForwarding(unittest.TestCase):
 
     def test_get_groups(self):
-        r = app.get('/user/{}/groups'.format(1))
+        r = app.get('/user/{}/groups/'.format(1))
 
         self.assertEqual(
             r.json,
