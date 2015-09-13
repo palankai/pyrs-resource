@@ -82,6 +82,8 @@ class Directory(object):
 
 class Dispatcher(Directory):
 
+    Response = gateway.Response
+
     def dispatch(self, request, path=None):
         if path is None:
             path = request.path
@@ -93,9 +95,9 @@ class Dispatcher(Directory):
             content = func(**kwargs)
             if isinstance(content, gateway.Response):
                 return content
-            return gateway.Response().produce(request, content)
+            return self.Response().produce(request, content)
         except Exception as ex:
-            return gateway.Response.from_exception(ex)
+            return self.Response.from_exception(ex)
 
 
 class App(Dispatcher):
