@@ -23,6 +23,7 @@ class UserSchema(Object):
 
 
 class UserResource(object):
+    # The implemented methods doesn't modify the database, just emulate it
 
     @GET(output=Array(items=UserSchema()))
     def get_users(self):
@@ -45,11 +46,17 @@ class UserResource(object):
         self.get_user(pk)
         return
 
+    @RPC(path='/<int:pk>/set_password', body=String(name='password'))
+    def set_password(self, pk, password):
+        self.get_user(pk)
+        return
+
     @GET(path='/<int:pk>', output=UserSchema)
     def get_user(self, pk):
         for user in users:
             if user['pk'] == pk:
                 return user
+        raise NotFound('User#%s not found' % pk)
 
     @GET(path='/<int:pk>/groups', output=Array(items=String()))
     def get_user_groups(self, pk):
@@ -59,12 +66,12 @@ class UserResource(object):
             if pk in group['members']:
                 names.append(group['name'])
         return names
-
     @GET(path='/<string:name>', output=UserSchema)
     def get_user_by_name(self, name):
         for user in users:
             if user['username'] == name:
                 return user
+        raise NotFound('User(username=%s) not found' % name)
 
     @PATCH(
         path='/<int:pk>',
@@ -75,6 +82,29 @@ class UserResource(object):
         user = self.get_user(pk).copy()
         user.update(body)
         return user
+
+    # The following methods will raise errors
+
+    @PUT(path='/unexpected-error')
+    def unexpected_error(self):
+        raise Exception('Something happened')
+
+    @PUT(path='/builtin-error')
+    def builtin_error(self):
+        users[9]
+
+    @PUT(path='/interface-error')
+    def interface_error(self, pk):
+        # Will raise TypeError because of pk argument
+        pass
+
+    @PUT(path='/not-implemented-error')
+    def not_implemented_error(self):
+        raise NotImplementedError()
+
+    @PUT(path='/internal-server-error')
+    def internal_server_error(self):
+        raise InternalServerError('Something happened')
 
 
 class DemoApplication(App):

@@ -1,5 +1,6 @@
 from pyrs import schema
 import six
+import werkzeug
 
 from . import lib
 
@@ -135,9 +136,23 @@ class Error(Exception):
         You could use it for `Error` instances as well, though is not
         recommended.
         """
-        ex = cls(*original.args, cause=original)
-        ex.error = lib.get_fqname(original)
+        if isinstance(original, NotImplementedError):
+            ex = cls(*original.args)
+            ex.error = 'NotImplemented'
+            ex.status = 501
+        elif isinstance(original, werkzeug.exceptions.HTTPException):
+            ex = cls(original.description)
+            ex.status = original.code
+            ex.error = original.name.replace(' ', '')
+        else:
+            ex = cls(*original.args, cause=original)
+            ex.error = lib.get_fqname(original)
         return ex
+
+
+class InternalServerError(Error):
+    status = 500
+    error = 'InternalServerError'
 
 
 class ClientError(Error):
@@ -147,14 +162,9 @@ class ClientError(Error):
     status = 400
 
 
-class ValidationErrorX(Error):
-    status = 500
-    error = 'validation_error'
-
-
-class InputValidationErrorX(Error):
-    status = 400
-    error = 'invalid_request_format'
+class NotFound(ClientError):
+    error = 'NotFound'
+    status = 404
 
 
 class BadRequestErrorSchema(ErrorSchema):
@@ -171,7 +181,7 @@ class BadRequestErrorSchema(ErrorSchema):
 
 class BadRequestError(ClientError):
     """
-    Request cannot be processed because of error.
+    Request cannot be processed because of an error.
     """
 
     schema = BadRequestErrorSchema

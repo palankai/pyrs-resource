@@ -126,10 +126,11 @@ class RequestMixin(object):
             return value
         try:
             return consumer(value, option)
-        except Exception as ex:
-            if getattr(ex, 'errors'):
-                raise errors.BadRequestError(errors=ex.errors)
-            raise
+        except schema.exceptions.SchemaError as ex:
+            raise errors.BadRequestError(
+                *ex.args,
+                errors=getattr(ex, 'errors', None)
+            )
 
 
 class CompatibilityMixin(object):
