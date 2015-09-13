@@ -66,6 +66,11 @@ class Directory(object):
             if prefix:
                 prefix += '#'
             name = prefix+opts['name']
+            if 'forward' in opts:
+                rule = self._make_rule(
+                    path+'/<path:path>', opts['methods'], name
+                )
+                self.rules.add(rule)
             rule = self._make_rule(path, opts['methods'], name)
             self.rules.add(rule)
             self.functions[name] = resource
@@ -79,24 +84,55 @@ class Directory(object):
         return werkzeug.routing.Rule(path, methods=methods, endpoint=endpoint)
 
 
+class Scope(object):
+
+    Response = gateway.Response
+
+    def __init__(self, request, application):
+        self.request = request
+        self.application = application
+
+    @property
+    def response(self):
+        if not getattr(self, '_response', None):
+            self._response = self.Response()
+            self._response.parse_request(self.request)
+        return self._response
+
+    def forward(self, resource, path='/'):
+        return self.application.forward(self, path, resource)
+
+
 class Dispatcher(Directory):
 
     Response = gateway.Response
 
-    def dispatch(self, request, path=None):
+    def dispatch(self, request, path=None, scope=None):
         if path is None:
             path = request.path
+        if scope is None:
+            scope = Scope(request=request, application=self)
         try:
             func, kwargs = self.match(path, request.method)
             meta = lib.get_meta(func)
             kwargs.update(request.parse(meta))
+            if meta.get('scope') is True:
+                kwargs.update(scope=scope)
 
             content = func(**kwargs)
             if isinstance(content, gateway.Response):
                 return content
-            return self.Response().produce(request, content)
+            return scope.response.produce(request, content)
         except Exception as ex:
             return self.Response.from_exception(ex)
+
+    @classmethod
+    def forward(cls, scope, path, resource):
+        if isinstance(resource, Dispatcher):
+            return resource.dispatch(scope.request, path, scope)
+        dispatcher = Dispatcher()
+        dispatcher.add('', resource)
+        return dispatcher.dispatch(scope.request, path, scope)
 
 
 class App(Dispatcher):

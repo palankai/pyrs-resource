@@ -165,6 +165,8 @@ class ExceptionMixin(object):
 
 class ProducerMixin(object):
 
+    _request_parsed = False
+
     producers = {
         'text/plain': _text_plain,
         'application/json': _application_json_writer,
@@ -177,18 +179,21 @@ class ProducerMixin(object):
         return self
 
     def _parse_value(self, request, value):
-        self._parse_request(request)
+        self.parse_request(request)
         if self._get_option(request):
             producer = self._get_producer(request)
             return producer(value, self._get_option(request))
         return value or ''
 
-    def _parse_request(self, request):
+    def parse_request(self, request):
         self.mimetype = request.headers.get(
             'Accept', self.default_mimetype
         )
-        self.status_code = request.options.get('status', 200)
         self.headers.extend(request.options.get('headers', {}))
+        if self._request_parsed:
+            return
+        self._request_parsed = True
+        self.status_code = request.options.get('status', self.status_code)
 
     def _get_option(self, request):
         return request.options.get('output')

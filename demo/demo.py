@@ -22,6 +22,35 @@ class UserSchema(Object):
     email = String()
 
 
+class GroupSchema(Object):
+    pk = Integer()
+    name = String()
+
+
+class GroupsForUserResource(object):
+
+    def __init__(self, user_pk):
+        self.user_pk = user_pk
+        self.groups = []
+        for group in groups:
+            if user_pk in group['members']:
+                self.groups.append(group)
+
+    @GET(output=Array(items=GroupSchema()))
+    def get_groups(self):
+        res = []
+        for group in self.groups:
+            res.append({'pk': group['pk'], 'name': group['name']})
+        return res
+
+    @GET(path='/<int:group_id>', output=GroupSchema())
+    def get_group(self, group_id):
+        for group in self.groups:
+            if group['pk'] == group_id:
+                return {'pk': group['pk'], 'name': group['name']}
+        raise NotFound('Group #%s not found' % pk)
+
+
 class UserResource(object):
     # The implemented methods doesn't modify the database, just emulate it
 
@@ -37,8 +66,10 @@ class UserResource(object):
         user['pk'] = 5
         return user
 
-    @PUT(body=UserSchema, output=UserSchema)
-    def set_user(self, body):
+    @PUT(body=UserSchema, output=UserSchema, scope=True)
+    def set_user(self, scope, body):
+        if not self.has_user(body['pk']):
+            scope.response.status_code = 201
         return body
 
     @DELETE(path='/<int:pk>')
@@ -58,14 +89,17 @@ class UserResource(object):
                 return user
         raise NotFound('User#%s not found' % pk)
 
-    @GET(path='/<int:pk>/groups', output=Array(items=String()))
-    def get_user_groups(self, pk):
-        self.get_user(pk)
-        names = []
-        for group in groups:
-            if pk in group['members']:
-                names.append(group['name'])
-        return names
+    def has_user(self, pk):
+        for user in users:
+            if user['pk'] == pk:
+                return True
+        return False
+
+    @FORWARD(path='/<int:pk>/groups', forward=GroupsForUserResource)
+    def get_user_groups(self, scope, pk, path='/'):
+        resource = GroupsForUserResource(pk)
+        return scope.forward(resource, path)
+
     @GET(path='/<string:name>', output=UserSchema)
     def get_user_by_name(self, name):
         for user in users:

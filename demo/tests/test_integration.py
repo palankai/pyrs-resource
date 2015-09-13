@@ -14,17 +14,15 @@ class TestIntegration(unittest.TestCase):
 
     def test_get_user_by_pk(self):
         r = app.get('/user/{}'.format(1))
+
         self.assertEqual(r.json, demo.users[0])
 
     def test_get_user_by_name(self):
         r = app.get('/user/{}'.format('admin'))
+
         self.assertEqual(r.json, demo.users[0])
 
-    def test_get_user_groups(self):
-        r = app.get('/user/{}/groups'.format(1))
-        self.assertEqual(r.json, ['administrators', 'users'])
-
-    def test_form_post(self):
+    def test_create_user_form_post(self):
         r = app.post('/user/', data={
             'username': 'editor', 'email': 'editor@example.com'
         })
@@ -35,7 +33,7 @@ class TestIntegration(unittest.TestCase):
             {'pk':5, 'username': 'editor', 'email': 'editor@example.com'}
         )
 
-    def test_json_post(self):
+    def test_create_user_json_post(self):
         user = {'username': 'editor', 'email': 'editor@example.com'}
         r = app.post('/user/', data=json.dumps(user))
 
@@ -56,7 +54,7 @@ class TestIntegration(unittest.TestCase):
             {'pk':1, 'username': 'admin', 'email': 'updated@example.com'}
         )
 
-    def test_set_user(self):
+    def test_put_an_exist_user(self):
         r = app.put('/user/', data={
             'pk':1, 'email': 'updated@example.com', 'username':'admin'
         })
@@ -65,6 +63,17 @@ class TestIntegration(unittest.TestCase):
         self.assertEqual(
             r.json,
             {'pk':1, 'username': 'admin', 'email': 'updated@example.com'}
+        )
+
+    def test_put_a_new_user(self):
+        r = app.put('/user/', data={
+            'pk':5, 'email': 'newuser@example.com', 'username':'newuser'
+        })
+
+        self.assertEqual(r.status_code, 201)
+        self.assertEqual(
+            r.json,
+            {'pk':5, 'email': 'newuser@example.com', 'username': 'newuser'}
         )
 
     def test_delete_user(self):
@@ -78,6 +87,26 @@ class TestIntegration(unittest.TestCase):
 
         self.assertEqual(r.text, '')
         self.assertEqual(r.status_code, 200)
+
+
+class TestForwarding(unittest.TestCase):
+
+    def test_get_groups(self):
+        r = app.get('/user/{}/groups'.format(1))
+
+        self.assertEqual(
+            r.json,
+            [{'pk': 1, 'name': 'administrators'}, {'pk': 2, 'name': 'users'}]
+        )
+
+    def test_get_group(self):
+        r = app.get('/user/{}/groups/{}'.format(1, 1))
+
+        self.assertEqual(
+            r.json,
+            {'pk': 1, 'name': 'administrators'}
+        )
+
 
 class TestErrors(unittest.TestCase):
 

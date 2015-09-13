@@ -83,3 +83,14 @@ def PATCH(_func=None, **kwargs):
     Ensure the given function will be available for PATCH method
     """
     return endpoint(_func, methods=['PATCH'], **kwargs)
+
+
+def FORWARD(_func=None, path='/', forward=None):
+    """
+    Ensure forwarding the request to an other resource
+    """
+    assert forward is not None
+    methods = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE']
+    return endpoint(
+        _func, path=path, forward=forward, methods=methods, scope=True
+    )
