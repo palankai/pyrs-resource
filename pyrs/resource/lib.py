@@ -12,6 +12,28 @@ def get_logger(obj):
     return logging.getLogger(get_fqname(obj))
 
 
+def fqname(target):
+    module = ''
+    if hasattr(target, '__module__'):
+        module = target.__module__ + '.'
+    if hasattr(target, '__qualname__'):
+        return module + target.__qualname__
+    if inspect.ismethod(target):
+        return module + target.im_class.__name__ + '.' + target.__name__
+    if inspect.isclass(target):
+        return module + target.__name__
+    if inspect.isfunction(target):
+        return module + target.__name__
+    # Exotic cases
+    if inspect.isbuiltin(target):
+        return module + target.__name__
+    if hasattr(target, '__objclass__'):
+        return target.__objclass__.__module__ + '.' + \
+            target.__objclass__.__name__ + '.' + \
+            target.__name__
+    return module + target.__class__.__name__
+
+
 def get_fqname(thing):
     if isinstance(thing, type):
         return thing.__module__+'.'+thing.__name__
