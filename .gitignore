@@ -8,3 +8,4 @@ TAGS
 build/
 dist/
 .vimrc_local
+_local
