@@ -99,3 +99,13 @@ def _parse_converter_args(arguments):
     if arguments is None:
         return (), {}
     return werkzeug.routing.parse_converter_args(arguments)
+
+
+def ensure_list(thing):
+    if not thing:
+        return []
+    if isinstance(thing, list):
+        return thing
+    if isinstance(thing, (set, tuple)):
+        return list(thing)
+    return [thing]
