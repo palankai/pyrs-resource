@@ -1,5 +1,3 @@
-import functools
-
 import six
 
 from . import lib
@@ -82,91 +80,75 @@ class Endpoint(dict):
         return ".".join(map(lambda x: x['name'], self.chain))
 
 
-def init(_target_, **extra):
-    name = extra.pop('name', _target_.__name__)
-    extra.pop('realname', None)
-    extra.pop('target', None)
-    if not hasattr(_target_, '_endpoint_'):
-        _target_._endpoint_ = Endpoint(name)
-        _target_._endpoint_['name'] = name
-        _target_._endpoint_['realname'] = _target_.__name__
-        _target_._endpoint_['target'] = _target_
-    _target_._endpoint_.update(extra)
-    return _target_
-
-
-def decorator(f=None, base=None):
-    def decorate(f):
-        @functools.wraps(f)
-        def wrapper(self, _target_, *args, **kwargs):
-            if isinstance(_target_, Endpoint):
-                kwargs.pop('realname', None)
-                kwargs.pop('target', None)
-                _target_.update(kwargs)
-                if base:
-                    base(self, _target_, **kwargs)
-                f(self, _target_, *args, **kwargs)
-            else:
-                init(_target_, **kwargs)
-                if base:
-                    base(self, _target_, **kwargs)
-                f(self, _target_._endpoint_, *args, **kwargs)
-            return _target_
-
-        def inner(self, _target_=None, *args, **kwargs):
-            def decorate(_target_):
-                return wrapper(self, _target_, *args, **kwargs)
-            if _target_ is not None:
-                return decorate(_target_)
-            return decorate
-        inner.f = wrapper
-        return inner
-    if f is not None:
-        return decorate(f)
-    return decorate
-
-
 class Factory(object):
 
-    @decorator
-    def RESOURCE(self, _endpoint_, **kwargs):
-        pass
+    def GET(self, _target_=None, path=None, methods=None, **extra):
+        decorate = self.ENDPOINT(path, methods or ['GET'], **extra)
+        return _target_ and decorate(_target_) or decorate
 
-    @decorator
-    def PATH(self, _endpoint_, path='/', **extra):
-        _endpoint_['paths'] = map(Path, lib.ensure_list(path))
+    def POST(self, _target_=None, path=None, methods=None, **extra):
+        decorate = self.ENDPOINT(path, methods or ['POST'], **extra)
+        return _target_ and decorate(_target_) or decorate
 
-    @decorator(base=PATH)
-    def GET(self, _endpoint_, **extra):
-        _endpoint_['methods'] = self._get_methods(_endpoint_, extra, ['GET'])
+    def PUT(self, _target_=None, path=None, methods=None, **extra):
+        decorate = self.ENDPOINT(path, methods or ['PUT'], **extra)
+        return _target_ and decorate(_target_) or decorate
 
-    @decorator(base=PATH)
-    def POST(self, _endpoint_, **extra):
-        _endpoint_['methods'] = self._get_methods(_endpoint_, extra, ['POST'])
+    def DELETE(self, _target_=None, path=None, methods=None, **extra):
+        decorate = self.ENDPOINT(path, methods or ['DELETE'], **extra)
+        return _target_ and decorate(_target_) or decorate
 
-    @decorator(base=PATH)
-    def PUT(self, _endpoint_=None, **extra):
-        _endpoint_['methods'] = self._get_methods(_endpoint_, extra, ['PUT'])
+    def PATCH(self, _target_=None, path=None, methods=None, **extra):
+        decorate = self.ENDPOINT(path, methods or ['PATCH'], **extra)
+        return _target_ and decorate(_target_) or decorate
 
-    @decorator(base=PATH)
-    def DELETE(self, _endpoint_=None, **extra):
-        _endpoint_['methods'] = \
-            self._get_methods(_endpoint_, extra, ['DELETE'])
+    def RPC(self, _target_, path=None, methods=None, **extra):
+        decorate = self.ENDPOINT(path, methods or ['POST'], **extra)
+        return _target_ and decorate(_target_) or decorate
 
-    @decorator(base=PATH)
-    def PATCH(self, _endpoint_=None, **extra):
-        _endpoint_['methods'] = \
-            self._get_methods(_endpoint_, extra, ['PATCH'])
+    def ENDPOINT(self, path, methods, **extra):
+        def decorate(target):
+            self.make(target, extra)
+            self._update_path(target, path)
+            self._update_methods(target, methods)
+            return target
+        return decorate
 
-    @decorator(base=PATH)
-    def RPC(self, _endpoint_=None, **extra):
-        _endpoint_['methods'] = \
-            self._get_methods(_endpoint_, extra, ['POST'])
+    def PATH(self, path):
+        def decorate(_target_):
+            self.make(_target_)
+            self._update_path(_target_, path)
+            return _target_
+        return decorate
 
-    def _get_methods(self, _endpoint_, extra, default):
-        default = default + extra.get('methods', [])
-        methods = _endpoint_.get('methods', [])
-        return list(set(methods + default))
+    def RESOURCE(self, _target_=None, **extra):
+        def decorate(target):
+            self.make(target, extra)
+            return target
+        return _target_ and decorate(_target_) or decorate
+
+    def make(self, target, extra=None):
+        if extra is None:
+            extra = {}
+        name = extra.pop('name', target.__name__)
+        if not hasattr(target, '_endpoint_'):
+            target._endpoint_ = Endpoint(name)
+            target._endpoint_['realname'] = target.__name__
+            target._endpoint_['target'] = target
+        target._endpoint_.update(extra)
+        return target
+
+    def _update_path(self, target, path):
+        if not path:
+            return
+        paths = target._endpoint_.get('paths') or []
+        paths.extend(map(Path, lib.ensure_list(path)))
+        target._endpoint_['paths'] = paths
+
+    def _update_methods(self, target, default):
+        endpoint = target._endpoint_
+        methods = endpoint.get('methods', [])
+        endpoint['methods'] = list(set(methods + default))
 
 
 factory = Factory()

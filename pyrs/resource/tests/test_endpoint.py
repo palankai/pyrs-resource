@@ -192,21 +192,10 @@ class TestFactoryBase(unittest.TestCase):
         self.assertEqual(func._endpoint_['name'], 'fancyname')
         self.assertEqual(func._endpoint_['realname'], 'func')
 
-    def test_realname_cannot_change(self):
-        factory = endpoints.Factory()
-
-        @factory.RESOURCE(name='fancyname', realname='fancyname')
-        def func():
-            pass
-
-        self.assertIsInstance(func._endpoint_, endpoints.Endpoint)
-        self.assertEqual(func._endpoint_['name'], 'fancyname')
-        self.assertEqual(func._endpoint_['realname'], 'func')
-
     def test_endpoint_default_behaviour(self):
         factory = endpoints.Factory()
 
-        @factory.PATH
+        @factory.PATH('/')
         def func():
             pass
 
@@ -293,7 +282,7 @@ class TestMultipleEndpoints(unittest.TestCase):
         )
 
     def test_multiple_endpoint_given(self):
-        @endpoints.PUT(methods=['PATCH'])
+        @endpoints.PUT(methods=['PATCH', 'PUT'])
         def func():
             pass
         self.assertEqual(
