@@ -267,6 +267,7 @@ class TestEndpoints(unittest.TestCase):
 
     def test_special_shortcuts(self):
         self.assertEqual(endpoints.RPC, endpoints.factory.RPC)
+        self.assertEqual(endpoints.PATH, endpoints.factory.PATH)
 
 
 class TestMultipleEndpoints(unittest.TestCase):
@@ -293,6 +294,16 @@ class TestMultiplePaths(unittest.TestCase):
 
     def test_multiple_paths(self):
         @endpoints.factory.GET(path=['/user/<id>', '/admin'])
+        def func():
+            pass
+
+        [path1, path2] = func._endpoint_['paths']
+        self.assertEqual(path1, '/user/<id>')
+        self.assertEqual(path2, '/admin')
+
+    def test_extend_paths(self):
+        @endpoints.factory.GET(path=['/admin'])
+        @endpoints.factory.PATH('/user/<id>')
         def func():
             pass
 

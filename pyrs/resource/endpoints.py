@@ -159,3 +159,4 @@ PUT = factory.PUT
 DELETE = factory.DELETE
 PATCH = factory.PATCH
 RPC = factory.RPC
+PATH = factory.PATH
