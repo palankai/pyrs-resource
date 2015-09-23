@@ -13,7 +13,7 @@ class Mount(routing.RuleFactory):
         return self.get_method_rules(map)
 
     def get_method_rules(self, map):
-        endpoint = self.resource._endpoint_
+        endpoint = self.resource._endpoint_.copy()
         methods = endpoint['methods']
         paths = endpoint.get('paths', [''])
         for path in paths:
