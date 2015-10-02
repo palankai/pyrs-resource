@@ -189,11 +189,13 @@ class ProducerMixin(object):
         self.mimetype = request.headers.get(
             'Accept', self.default_mimetype
         )
-        self.headers.extend(request.options.get('headers', {}))
+        if hasattr(request, 'options'):
+            self.headers.extend(request.options.get('headers', {}))
         if self._request_parsed:
             return
         self._request_parsed = True
-        self.status_code = request.options.get('status', self.status_code)
+        if hasattr(request, 'options'):
+            self.status_code = request.options.get('status', self.status_code)
 
     def _get_option(self, request):
         return request.options.get('output')
@@ -215,3 +217,18 @@ class Response(
     ExceptionMixin
 ):
     default_mimetype = 'application/json'
+
+
+class Envelope(object):
+
+    Response = Response
+
+    def __init__(self, request):
+        self.request = request
+
+    @property
+    def response(self):
+        if not getattr(self, '_response', None):
+            self._response = self.Response()
+            self._response.parse_request(self.request)
+        return self._response

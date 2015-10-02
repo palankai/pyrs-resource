@@ -17,6 +17,12 @@ class Path(six.text_type):
             self._parse()
         return self._args
 
+    @property
+    def keys(self):
+        if not hasattr(self, '_args'):
+            self._parse()
+        return self._args.keys()
+
     def _parse(self):
         self._template, self._args = lib.parse_path(self)
 
@@ -30,17 +36,30 @@ class Path(six.text_type):
         return self.template.format(**kwargs)
 
 
-class Endpoint(dict):
+class Descriptor(dict):
+    _create_index = 0
+
+    def __init__(self, *args, **kwargs):
+        super(Descriptor, self).__init__(*args, **kwargs)
+        self._create_index = Descriptor._create_index
+        Descriptor._create_index += 1
+
+
+class Forward(Descriptor):
+    pass
+
+
+class Operation(Descriptor):
 
     def __init__(self, name, *args, **kwargs):
-        super(Endpoint, self).__init__(*args, **kwargs)
+        super(Operation, self).__init__(*args, **kwargs)
         self['name'] = name
 
     def __hash__(self):
         return hash(self['name'])
 
     def __eq__(self, other):
-        if isinstance(other, Endpoint):
+        if isinstance(other, Operation):
             return self['name'] == other['name']
         return self['name'] == other
 
@@ -50,8 +69,16 @@ class Endpoint(dict):
     def __str__(self):
         return self['name']
 
+    def __call__(self, **kwargs):
+        target = self['target']
+        if not callable(target):
+            upstream = self['upstream']
+            target = getattr(upstream(**kwargs), target)
+        kwargs.update(self.get('kwargs', {}))
+        return target(**kwargs)
+
     def copy(self):
-        data = super(Endpoint, self).copy()
+        data = super(Operation, self).copy()
         return self.__class__(data.pop('name'), **data)
 
     @property
@@ -127,26 +154,37 @@ class Factory(object):
             return target
         return _target_ and decorate(_target_) or decorate
 
+    def FORWARD(self, path, resource):
+        def decorate(_target_):
+            _target_._descriptor_ = Forward()
+            _target_._descriptor_['path'] = path
+            _target_._descriptor_['resource'] = resource
+            return _target_
+        return decorate
+
     def make(self, target, extra=None):
         if extra is None:
             extra = {}
-        name = extra.pop('name', target.__name__)
-        if not hasattr(target, '_endpoint_'):
-            target._endpoint_ = Endpoint(name)
-            target._endpoint_['realname'] = target.__name__
-            target._endpoint_['target'] = target
-        target._endpoint_.update(extra)
+        location, realname = lib.fqname(target).rsplit('.', 1)
+        name = extra.pop('name', realname)
+        if not hasattr(target, '_descriptor_'):
+            target._descriptor_ = Operation(name)
+            target._descriptor_['realname'] = realname
+            target._descriptor_['location'] = location
+            target._descriptor_['fqname'] = location + '.' + realname
+            target._descriptor_['target'] = target
+        target._descriptor_.update(extra)
         return target
 
     def _update_path(self, target, path):
         if not path:
             return
-        paths = target._endpoint_.get('paths') or []
+        paths = target._descriptor_.get('paths') or []
         paths.extend(map(Path, lib.ensure_list(path)))
-        target._endpoint_['paths'] = paths
+        target._descriptor_['paths'] = paths
 
     def _update_methods(self, target, default):
-        endpoint = target._endpoint_
+        endpoint = target._descriptor_
         methods = endpoint.get('methods', [])
         endpoint['methods'] = list(set(methods + default))
 
@@ -160,3 +198,4 @@ DELETE = factory.DELETE
 PATCH = factory.PATCH
 RPC = factory.RPC
 PATH = factory.PATH
+FORWARD = factory.FORWARD
